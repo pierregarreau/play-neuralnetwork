@@ -19,17 +19,21 @@ class NeuralNetwork:
 
     def train(self, inputFeaturesVector, outputTargetsVector, trainedParametersDirectory = DEFAULT_DIRECTORY):
         # this function trains the neural network with backward propagation
-        pass
+        self.__initializeNeuralNetworkParameters()
+        predictedTargets = self.__feedForward(inputFeaturesVector)
+        self.__backPropagation(predictedTargets, outputTargetsVector)
 
     def __construct(self, numOfNodesPerLayer):
         if numOfNodesPerLayer.ndim > 1:
             print('Error : numOfNodesPerLayer needs to be a vector')
         else:
             self.__numLayers = numOfNodesPerLayer.size
-            self.__thetas = [np.empty(currentLayer,nextLayer)
+            self.__thetas = [np.empty(currentLayer,nextLayer+1)
                 for currentLayer, nextLayer in zip(numOfNodesPerLayer[:-1], numOfNodesPerLayer[1:])]
 
     def __loadTrainedParametersFromFiles(self,trainedParametersDirectory):
+        # TODO check if the dimensions of the loaded parameters are the ones announced
+        # in the construction of the neural network
         for counter in range(self.__numLayers-1):
             trainedThetaFileName = trainedParametersDirectory + '/Theta' + str(counter) + '.txt'
             self.__thetas[counter] = NeuralNetworkUtil.loadDataFromFile(trainedThetaFileName)
@@ -41,3 +45,16 @@ class NeuralNetwork:
             layerOutput = np.dot(layerInputWithBias,theta.transpose())
             NeuralNetworkUtil.applyScalarFunction(layerOutput,NeuralNetworkUtil.sigmoid)
         return layerOutput
+
+    def __initializeNeuralNetworkParameters(self):
+        # TODO
+        pass
+
+    def __backPropagation(self, predictedTargets, outputTargetsVector):
+        # TODO
+        # Check minimization library
+        # Compute ErrorFunction
+        # Compute Gradient of ErrorFunction
+        # Minimize
+        # Store Theta
+        pass
