@@ -1,6 +1,6 @@
 
 from math import exp,ceil
-from numpy import loadtxt, empty, ones
+from numpy import loadtxt, empty, ones, array, append, reshape
 
 class NeuralNetworkUtil:
     def __init__():
@@ -42,3 +42,31 @@ class NeuralNetworkUtil:
             if target%(predictedTarget[counter].argmax()+1)==0:
                 predictionAccuracy += 1.0
         return predictionAccuracy / n
+
+    @staticmethod
+    def roll(listOfThetas):
+        # this function transforms a list of matrices into a vector
+        vectorThetas = array([])
+        for theta in listOfThetas:
+            currentLayerSize = theta.shape[0]
+            nextLayerSize = theta.shape[1]
+            vectorThetas = append(vectorThetas, theta.reshape(currentLayerSize, nextLayerSize))
+            print("vector theta",theta.reshape(currentLayerSize, nextLayerSize))
+        return vectorThetas
+
+    @staticmethod
+    def unroll(vectorThetas, listOfThetas):
+        # this function transforms a vector into a list of matrices
+        pointerFlatTheta = 0
+        for theta in listOfThetas:
+            currentLayerSize = theta.shape[0]
+            nextLayerSize = theta.shape[1]
+            sizeFlatTheta = currentLayerSize * nextLayerSize
+            vectorTheta = vectorThetas[pointerFlatTheta:pointerFlatTheta+sizeFlatTheta]
+            theta = vectorTheta.reshape(nextLayerSize,currentLayerSize)
+            pointerFlatTheta += sizeFlatTheta
+
+    @staticmethod
+    def leastSquareError(prediction, target):
+        # TODO
+        return 1.0

@@ -17,10 +17,12 @@ if __name__ == "__main__":
         targetsFile = DATA_DIRECTORY + '/targetVectors.txt'
         targets = NeuralNetworkUtil.loadDataFromFile(targetsFile)
 
-        neuralNetworkArchitecture = array([2,2,1])
+        neuralNetworkArchitecture = array([400,25,10])
         xNor = nn.NeuralNetwork(neuralNetworkArchitecture)
-        predictedTargets = xNor.predict(inputVectors)
 
-        print(NeuralNetworkUtil.computePredictionAccuracy(predictedTargets, targets))
+        xNor.train(inputVectors,targets)
+
+        # predictedTargets = xNor.predict(inputVectors)
+        # print(NeuralNetworkUtil.computePredictionAccuracy(predictedTargets, targets))
     # except ValueError:
         # print(ValueError)
