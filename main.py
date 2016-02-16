@@ -6,20 +6,14 @@ import pandas as pd
 
 from numpy import array
 from NeuralNetworkUtil import *
+from NeuralNetworkConfig import loadNNConfigB
 
 DATA_DIRECTORY = './data'
 
 if __name__ == "__main__":
     # try:
-        inputVectorsFile = DATA_DIRECTORY + '/inputVectors.txt'
-        inputVectors = NeuralNetworkUtil.loadDataFromFile(inputVectorsFile)
-
-        targetsFile = DATA_DIRECTORY + '/targetVectors.txt'
-        targets = NeuralNetworkUtil.loadDataFromFile(targetsFile)
-
-        neuralNetworkArchitecture = array([400,25,10])
+        inputVectors,targets,neuralNetworkArchitecture = loadNNConfigB()
         xNor = nn.NeuralNetwork(neuralNetworkArchitecture)
-
         xNor.train(inputVectors,targets)
 
         # predictedTargets = xNor.predict(inputVectors)

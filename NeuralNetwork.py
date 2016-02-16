@@ -23,6 +23,10 @@ class NeuralNetwork:
         # this function trains the neural network with backward propagation
         self.__initializeNeuralNetworkParameters()
         self.__calibrate(inputFeaturesVector, outputTargetsVector)
+        # TODO Export trained parameters to trainedParametersDirectory
+
+    def getListOfThetas(self):
+        return self.__thetas
 
     def __construct(self, numOfNodesPerLayer):
         if numOfNodesPerLayer.ndim > 1:
@@ -40,12 +44,15 @@ class NeuralNetwork:
             self.__thetas[counter] = NeuralNetworkUtil.loadDataFromFile(trainedThetaFileName)
 
     def __feedForward(self, inputFeaturesVector):
-        layerOutput = inputFeaturesVector
+        a = inputFeaturesVector
+        layerOutputs = list()
+        layerOutputs.append(([],a))
         for theta in self.__thetas:
-            layerInputWithBias = NeuralNetworkUtil.addBiasTerm(layerOutput)
-            layerOutput = np.dot(layerInputWithBias,theta.transpose())
-            NeuralNetworkUtil.applyScalarFunction(layerOutput,NeuralNetworkUtil.sigmoid)
-        return layerOutput
+            layerInputWithBias = NeuralNetworkUtil.addBiasTerm(a)
+            z = np.dot(layerInputWithBias,theta.transpose())
+            a = NeuralNetworkUtil.applyScalarFunction(z, NeuralNetworkUtil.sigmoid)
+            layerOutputs.append((z,a))
+        return layerOutputs
 
     def __initializeNeuralNetworkParameters(self):
         epsilon = 0.001
@@ -57,23 +64,71 @@ class NeuralNetwork:
                     theta[inputIndex, outputIndex] = uniform(-epsilon, epsilon)
 
     def __calibrate(self, inputFeaturesVector, outputTargetsVector):
-        # costFunction = lambda theta : self.__costFunction(theta, inputFeaturesVector, outputTargetsVector)
-        self.__costFunction([], inputFeaturesVector, outputTargetsVector)
-        # optimizationOptions = {'gtol': 1e-6, 'disp': True}
+        costFunction = lambda theta : self.__costFunction(theta, inputFeaturesVector, outputTargetsVector)
+        optimizationOptions = {'gtol': 1e-6, 'disp': True}
         thetaInit = NeuralNetworkUtil.roll(self.__thetas)
-        # res = minimize(costFunction, thetaInit, method='BFGS', jac=True, options=optimizationOptions)
+        res = minimize(costFunction, thetaInit, method='BFGS', jac=True, options=optimizationOptions)
+        pass
 
     def __costFunction(self, vectorTheta, inputFeaturesVector, outputTargetsVector):
+        # Initialise
         J = []
         grad = []
+        # Cost function
         NeuralNetworkUtil.unroll(vectorTheta, self.__thetas)
-        targetPrediction = self.__feedForward(inputFeaturesVector)
-        # J = NeuralNetworkUtil.logErrorFunction(targetPrediction, outputTargetsVector)
-
-        # grads = self.__backPropagation(targetPrediction, outputTargetsVector)
+        layerOutputs = self.__feedForward(inputFeaturesVector)
+        J = NeuralNetworkUtil.logErrorClassificationFunction(layerOutputs[-1][1], outputTargetsVector)
+        # Cost function gradient
+        grads = self.__backPropagation(layerOutputs, outputTargetsVector)
         flatGrad = NeuralNetworkUtil.roll(grads)
-        return [J, grad]
+        return [J, flatGrad]
 
-    def __backPropagation(self, targetPrediction, outputTargetsVector):
-        #TODO
-        pass
+    def __backPropagation(self, layerOutputs, outputTargetsVector):
+        # Initialization
+        numObservations = outputTargetsVector.__len__()
+        numLayers = layerOutputs.__len__()
+        grads = []
+
+        # First iteration
+        delta =  layerOutputs[-1][1] - outputTargetsVector
+        grad = np.dot(delta.transpose(), NeuralNetworkUtil.addBiasTerm(layerOutputs[-2][1])) / numObservations
+        grads.append(grad)
+        # Second layer
+        propError = np.dot(delta, self.__thetas[-1])
+        gZ = NeuralNetworkUtil.applyScalarFunction(layerOutputs[-2][0], NeuralNetworkUtil.sigmoidGrad)
+        delta = np.multiply(gZ,propError[:,1:])
+        grad = np.dot(delta.transpose(),NeuralNetworkUtil.addBiasTerm(layerOutputs[-3][1])) / numObservations
+        grads.insert(0,grad)
+
+        # TODO create loop to perform whatever the number of layers
+        # for index, theta in reversed(list(enumerate(self.__thetas[1:]))):
+        #     print(index)
+        #     if index > 0:
+        #         zNextLayer = layerOutputs[index][0] # remove assignment
+        #         aCurrentLayer = layerOutputs[index][1] # remove assignment
+        #
+        #         deltaFactor = np.dot(delta,theta)
+        #         deltaFactor = deltaFactor[:,1:]
+        #
+        #         delta = np.multiply(NeuralNetworkUtil.applyScalarFunction(zNextLayer, NeuralNetworkUtil.sigmoidGrad), deltaFactor)
+        #
+        #         grad = np.dot(aCurrentLayer.transpose(), delta) / numObservations
+        #         grads.insert(grad,0)
+
+        return grads
+
+    # Below only used for computing numerial gradient (testing)
+    def __feedForwardNoHistory(self, inputFeaturesVector):
+        a = inputFeaturesVector
+        for theta in self.__thetas:
+            layerInputWithBias = NeuralNetworkUtil.addBiasTerm(a)
+            z = np.dot(layerInputWithBias,theta.transpose())
+            a = NeuralNetworkUtil.applyScalarFunction(z, NeuralNetworkUtil.sigmoid)
+        return (z,a)
+
+    def __costFunctionOnly(self, vectorTheta, inputFeaturesVector, outputTargetsVector):
+        J = []
+        NeuralNetworkUtil.unroll(vectorTheta, self.__thetas)
+        layerOutputs = self.__feedForwardNoHistory(inputFeaturesVector)
+        J = NeuralNetworkUtil.logErrorClassificationFunction(layerOutputs[1], outputTargetsVector)
+        return J
