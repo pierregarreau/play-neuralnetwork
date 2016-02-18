@@ -73,9 +73,13 @@ class NeuralNetworkUtil:
             pointerFlatTheta += sizeFlatTheta
 
     @staticmethod
-    def logErrorClassificationFunction(prediction, target):
-        assert prediction.__len__() == target.__len__()
-        return np.sum(np.sum( - target * log(prediction) - (1-target) * log(1 - prediction)) / target[0].__len__() ) / target.__len__()
+    def logErrorClassificationFunction(predictions, targets):
+        assert predictions.__len__() == targets.__len__()
+        J = 0.0
+        m = targets.__len__()
+        for target, prediction in zip(targets, predictions):
+            J += np.sum( - target * log(prediction) - (1-target) * log(1 - prediction) )
+        return J / m
 
     @staticmethod
     def transformClassificationTargetToBinaryVector(targets):

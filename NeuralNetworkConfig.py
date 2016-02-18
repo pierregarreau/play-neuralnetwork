@@ -29,7 +29,7 @@ def loadNNConfigC():
     for sample in range(sampleSize):
         inputVectors[sample] = [random.randint(0,1), random.randint(0,1)]
         targets[sample] = [XNOR(inputVectors[sample][0], inputVectors[sample][1]),NOR(inputVectors[sample][0], inputVectors[sample][1])]
-    neuralNetworkArchitecture = array([2,6,2])
+    neuralNetworkArchitecture = array([2,2,2])
     return inputVectors,targets,neuralNetworkArchitecture
 
 def loadNNConfigD():

@@ -85,13 +85,14 @@ class NeuralNetwork:
 
     def __backPropagation(self, layerOutputs, outputTargetsVector):
         # Initialization
-        numObservations = outputTargetsVector.__len__()
+        numObservations = outputTargetsVector.shape[0]
         numLayers = layerOutputs.__len__()
         grads = []
 
         # First iteration
-        delta =  layerOutputs[-1][1] - outputTargetsVector
-        grad = np.dot(delta.transpose(), NeuralNetworkUtil.addBiasTerm(layerOutputs[-2][1])) / numObservations
+        delta = layerOutputs[-1][1] - outputTargetsVector
+        a2withBias = NeuralNetworkUtil.addBiasTerm(layerOutputs[1][1])
+        grad = np.dot(delta.transpose(), a2withBias) / numObservations
         grads.append(grad)
         # Second layer
         propError = np.dot(delta, self.__thetas[-1])
