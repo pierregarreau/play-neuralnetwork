@@ -17,13 +17,13 @@ class NeuralNetwork:
         # this function performs forward propagation
         self.__loadTrainedParametersFromFiles(trainedParametersDirectory)
         targetPrediction = self.__feedForward(inputFeaturesVector)
-        return targetPrediction
+        return targetPrediction[-1][1]
 
     def train(self, inputFeaturesVector, outputTargetsVector, trainedParametersDirectory = DEFAULT_DIRECTORY):
         # this function trains the neural network with backward propagation
         self.__initializeNeuralNetworkParameters()
         self.__calibrate(inputFeaturesVector, outputTargetsVector)
-        # TODO Export trained parameters to trainedParametersDirectory
+        self.__exportTrainedParametersToFiles(trainedParametersDirectory)
 
     def getListOfThetas(self):
         return self.__thetas
@@ -42,6 +42,13 @@ class NeuralNetwork:
         for counter in range(self.__numLayers-1):
             trainedThetaFileName = trainedParametersDirectory + '/Theta' + str(counter) + '.txt'
             self.__thetas[counter] = NeuralNetworkUtil.loadDataFromFile(trainedThetaFileName)
+
+    def __exportTrainedParametersToFiles(self,trainedParametersDirectory):
+        # TODO check if the dimensions of the loaded parameters are the ones announced
+        # in the construction of the neural network
+        for counter,theta in zip(range(self.__numLayers-1), self.__thetas):
+            trainedThetaFileName = trainedParametersDirectory + '/Theta' + str(counter) + '.txt'
+            NeuralNetworkUtil.saveDataToFile(theta,trainedThetaFileName)
 
     def __feedForward(self, inputFeaturesVector):
         a = inputFeaturesVector
@@ -95,6 +102,7 @@ class NeuralNetwork:
         grad = np.dot(delta.transpose(), a2withBias) / numObservations
         grads.append(grad)
 
+        # Other layers
         for index, theta in reversed(list(enumerate(self.__thetas))):
             if index > 0:
                 propError = np.dot(delta, theta)

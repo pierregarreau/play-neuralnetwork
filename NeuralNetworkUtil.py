@@ -1,6 +1,6 @@
 
 from math import ceil,fabs
-from numpy import loadtxt, empty, ones, array, append, reshape, eye, exp, log
+from numpy import loadtxt, savetxt, empty, ones, array, append, reshape, eye, exp, log
 import numpy as np
 
 class NeuralNetworkUtil:
@@ -31,6 +31,11 @@ class NeuralNetworkUtil:
         return loadtxt(pathToFile)
 
     @staticmethod
+    def saveDataToFile(theta, pathToFile):
+        # This function reads a file and returns a numpy array
+        return savetxt(pathToFile, theta)
+
+    @staticmethod
     def applyScalarFunction(arrayInput, function):
         return array(map(lambda value: function(value), arrayInput))
 
@@ -38,13 +43,12 @@ class NeuralNetworkUtil:
     def computePredictionAccuracy(predictedTarget,targets):
         # target is (n,1) with values in 1, ..., m,
         # predictedTarget is (n,m) with values between 0 and 1
+        predictedValues = NeuralNetworkUtil.transformClassificationTargetToValue(predictedTarget)
         predictionAccuracy = 0.0
-        n = predictedTarget.shape[0]
-        m = predictedTarget.shape[1]
-        for counter,target in zip(range(n),targets):
-            if target%(predictedTarget[counter].argmax()+1)==0:
+        for prediction,target in zip(predictedValues,targets):
+            if abs(prediction - target) == 0:
                 predictionAccuracy += 1.0
-        return predictionAccuracy / n
+        return predictionAccuracy / targets.__len__()
 
     @staticmethod
     def roll(listOfThetas):
@@ -89,4 +93,4 @@ class NeuralNetworkUtil:
 
     @staticmethod
     def transformClassificationTargetToValue(targets):
-        return map(lambda x : x.max(), targets)
+        return array(map(lambda x : x.argmax()+1, targets))
