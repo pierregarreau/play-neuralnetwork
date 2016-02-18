@@ -3,7 +3,7 @@ from NeuralNetwork import NeuralNetwork
 from NeuralNetworkUtil import NeuralNetworkUtil
 from NeuralNetworkConfig import loadNNConfigA,loadNNConfigB, loadNNConfigC, loadNNConfigD
 
-inputVectors,targets,neuralNetworkArchitecture = loadNNConfigD()
+inputVectors,targets,neuralNetworkArchitecture = loadNNConfigC()
 
 def initialize_test():
     NeuralNetwork(neuralNetworkArchitecture)

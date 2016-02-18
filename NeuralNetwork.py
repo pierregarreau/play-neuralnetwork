@@ -94,27 +94,14 @@ class NeuralNetwork:
         a2withBias = NeuralNetworkUtil.addBiasTerm(layerOutputs[1][1])
         grad = np.dot(delta.transpose(), a2withBias) / numObservations
         grads.append(grad)
-        # Second layer
-        propError = np.dot(delta, self.__thetas[-1])
-        gZ = NeuralNetworkUtil.applyScalarFunction(layerOutputs[-2][0], NeuralNetworkUtil.sigmoidGrad)
-        delta = np.multiply(gZ,propError[:,1:])
-        grad = np.dot(delta.transpose(),NeuralNetworkUtil.addBiasTerm(layerOutputs[-3][1])) / numObservations
-        grads.insert(0,grad)
 
-        # TODO create loop to perform whatever the number of layers
-        # for index, theta in reversed(list(enumerate(self.__thetas[1:]))):
-        #     print(index)
-        #     if index > 0:
-        #         zNextLayer = layerOutputs[index][0] # remove assignment
-        #         aCurrentLayer = layerOutputs[index][1] # remove assignment
-        #
-        #         deltaFactor = np.dot(delta,theta)
-        #         deltaFactor = deltaFactor[:,1:]
-        #
-        #         delta = np.multiply(NeuralNetworkUtil.applyScalarFunction(zNextLayer, NeuralNetworkUtil.sigmoidGrad), deltaFactor)
-        #
-        #         grad = np.dot(aCurrentLayer.transpose(), delta) / numObservations
-        #         grads.insert(grad,0)
+        for index, theta in reversed(list(enumerate(self.__thetas))):
+            if index > 0:
+                propError = np.dot(delta, theta)
+                gZ = NeuralNetworkUtil.applyScalarFunction(layerOutputs[index][0], NeuralNetworkUtil.sigmoidGrad)
+                delta = np.multiply(gZ,propError[:,1:])
+                grad = np.dot(delta.transpose(),NeuralNetworkUtil.addBiasTerm(layerOutputs[index-1][1])) / numObservations
+                grads.insert(0,grad)
 
         return grads
 
