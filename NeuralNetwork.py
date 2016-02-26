@@ -3,6 +3,7 @@ import pandas as pd
 
 from NeuralNetworkUtil import *
 from random import uniform
+from math import sqrt
 from scipy.optimize import minimize
 
 DEFAULT_DIRECTORY = './data/trainedData'
@@ -41,7 +42,11 @@ class NeuralNetwork:
         # in the construction of the neural network
         for counter in range(self.__numLayers-1):
             trainedThetaFileName = trainedParametersDirectory + '/Theta' + str(counter) + '.txt'
-            self.__thetas[counter] = NeuralNetworkUtil.loadDataFromFile(trainedThetaFileName)
+            theta = NeuralNetworkUtil.loadDataFromFile(trainedThetaFileName)
+            if theta.shape.__len__() > 1:
+                self.__thetas[counter] = theta
+            else:
+                self.__thetas[counter] = theta.reshape(1,theta.size)
 
     def __exportTrainedParametersToFiles(self,trainedParametersDirectory):
         # TODO check if the dimensions of the loaded parameters are the ones announced
@@ -51,46 +56,51 @@ class NeuralNetwork:
             NeuralNetworkUtil.saveDataToFile(theta,trainedThetaFileName)
 
     def __feedForward(self, inputFeaturesVector):
-        a = inputFeaturesVector
+        a = NeuralNetworkUtil.addBiasTerm(inputFeaturesVector)
         layerOutputs = list()
         layerOutputs.append(([],a))
-        for theta in self.__thetas:
-            layerInputWithBias = NeuralNetworkUtil.addBiasTerm(a)
-            z = np.dot(layerInputWithBias,theta.transpose())
-            a = NeuralNetworkUtil.applyScalarFunction(z, NeuralNetworkUtil.sigmoid)
+        for layerIndex, theta in zip(range(self.__numLayers), self.__thetas):
+            z = np.dot(a,theta.transpose())
+            if layerIndex < self.__numLayers - 2:
+                a = NeuralNetworkUtil.addBiasTerm(NeuralNetworkUtil.applyScalarFunction(z, NeuralNetworkUtil.sigmoid))
+            else:
+                a = NeuralNetworkUtil.applyScalarFunction(z, NeuralNetworkUtil.sigmoid)
             layerOutputs.append((z,a))
         return layerOutputs
 
     def __initializeNeuralNetworkParameters(self):
-        epsilon = 0.001
-        for theta in self.__thetas:
+        numOfMatrices = self.__thetas.__len__()
+        for index,theta in zip(range(numOfMatrices), self.__thetas):
             currentLayerSize = theta.shape[0]
             nextLayerSize = theta.shape[1]
-            for inputIndex in range(currentLayerSize):
-                for outputIndex in range(nextLayerSize):
-                    theta[inputIndex, outputIndex] = uniform(-epsilon, epsilon)
+            epsilon = sqrt(6.0) / sqrt(currentLayerSize + nextLayerSize)
+            self.__thetas[index] = epsilon * (np.random.uniform(0,2.0,(currentLayerSize,nextLayerSize)) - 1.0)
 
     def __calibrate(self, inputFeaturesVector, outputTargetsVector):
-        costFunction = lambda theta : self.__costFunction(theta, inputFeaturesVector, outputTargetsVector)
-        optimizationOptions = {'gtol': 1e-6, 'disp': True}
+        regParam = 0.0
+        costFunction = lambda theta : self.__costFunction(theta, inputFeaturesVector, outputTargetsVector, regParam)
+        optimizationOptions = {'maxiter': 100}
         thetaInit = NeuralNetworkUtil.roll(self.__thetas)
-        res = minimize(costFunction, thetaInit, method='BFGS', jac=True, options=optimizationOptions)
-        pass
+        res = minimize(costFunction, thetaInit, jac=True, options=optimizationOptions)
+        print(res.message)
+        print(res.success, res.fun)
 
-    def __costFunction(self, vectorTheta, inputFeaturesVector, outputTargetsVector):
+    def __costFunction(self, vectorTheta, inputFeaturesVector, outputTargetsVector, regParam):
         # Initialise
         J = []
-        grad = []
+        m = inputFeaturesVector.__len__()
         # Cost function
         NeuralNetworkUtil.unroll(vectorTheta, self.__thetas)
         layerOutputs = self.__feedForward(inputFeaturesVector)
         J = NeuralNetworkUtil.logErrorClassificationFunction(layerOutputs[-1][1], outputTargetsVector)
+        # J += self.__addRegularizationParameter(m, regParam)
         # Cost function gradient
-        grads = self.__backPropagation(layerOutputs, outputTargetsVector)
+        grad = []
+        grads = self.__backPropagation(layerOutputs, outputTargetsVector, m, regParam)
         flatGrad = NeuralNetworkUtil.roll(grads)
         return [J, flatGrad]
 
-    def __backPropagation(self, layerOutputs, outputTargetsVector):
+    def __backPropagation(self, layerOutputs, outputTargetsVector, m, regParam):
         # Initialization
         numObservations = outputTargetsVector.shape[0]
         numLayers = layerOutputs.__len__()
@@ -98,8 +108,9 @@ class NeuralNetwork:
 
         # First iteration
         delta = layerOutputs[-1][1] - outputTargetsVector
-        a2withBias = NeuralNetworkUtil.addBiasTerm(layerOutputs[1][1])
+        a2withBias = layerOutputs[-2][1]
         grad = np.dot(delta.transpose(), a2withBias) / numObservations
+        grad += regParam / m * self.__thetas[-1]
         grads.append(grad)
 
         # Other layers
@@ -108,10 +119,17 @@ class NeuralNetwork:
                 propError = np.dot(delta, theta)
                 gZ = NeuralNetworkUtil.applyScalarFunction(layerOutputs[index][0], NeuralNetworkUtil.sigmoidGrad)
                 delta = np.multiply(gZ,propError[:,1:])
-                grad = np.dot(delta.transpose(),NeuralNetworkUtil.addBiasTerm(layerOutputs[index-1][1])) / numObservations
+                grad = np.dot(delta.transpose(),layerOutputs[index-1][1]) / numObservations
+                grad += regParam / m * self.__thetas[index-1]
                 grads.insert(0,grad)
 
         return grads
+
+    def __addRegularizationParameter(self, m, regParam):
+        Jreg = 0.0
+        for theta in self.__thetas:
+            Jreg += 0.5 * regParam * np.sum(np.sum(theta[:,1:] * theta[:,1:])) / m
+        return Jreg
 
     # Below only used for computing numerial gradient (testing)
     def __feedForwardNoHistory(self, inputFeaturesVector):

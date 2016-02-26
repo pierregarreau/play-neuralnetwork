@@ -1,7 +1,7 @@
 from numpy import array,sum,abs,zeros,equal
 from NeuralNetwork import NeuralNetwork
 from NeuralNetworkUtil import NeuralNetworkUtil
-from NeuralNetworkConfig import loadNNConfigA,loadNNConfigB, loadNNConfigC, loadNNConfigD
+from NeuralNetworkConfig import loadNNConfigA1, loadNNConfigB, loadNNConfigC
 
 inputVectors,targets,neuralNetworkArchitecture = loadNNConfigC()
 
@@ -9,15 +9,43 @@ def initialize_test():
     NeuralNetwork(neuralNetworkArchitecture)
     assert True == True
 
-def backprop_test():
+def feedforward_test():
+    # Set up of NN
+    inputVectors_local,targets_local,neuralNetworkArchitecture_local = loadNNConfigB()
+    nn = NeuralNetwork(neuralNetworkArchitecture_local)
+    initializeThetasForConfigB(nn)
+    print(nn.getListOfThetas())
+    predictions = nn._NeuralNetwork__feedForward(inputVectors_local)
+    assert NeuralNetworkUtil.computePredictionAccuracy(predictions[-1][1], targets_local) > 0.99
+
+def predict_test():
+    # Set up of NN
+    inputVectors_local,targets_local,neuralNetworkArchitecture_local = loadNNConfigB()
+    nn = NeuralNetwork(neuralNetworkArchitecture_local)
+    initializeThetasForConfigB(nn)
+    print(nn.getListOfThetas())
+    predictions = nn.predict(inputVectors_local)
+    assert NeuralNetworkUtil.computePredictionAccuracy(predictions, targets_local) > 0.99
+
+def backpropGradient_test():
     # Set up of NN
     nn = NeuralNetwork(neuralNetworkArchitecture)
     nn._NeuralNetwork__initializeNeuralNetworkParameters()
     listOfThetas = nn.getListOfThetas()
+    print(listOfThetas)
     vectorTheta = NeuralNetworkUtil.roll(listOfThetas)
     # Test
     errTolerance = 1e-6
     assert gradientCheck(nn, vectorTheta, inputVectors, targets) < errTolerance
+
+# def backprop_test():
+#     # Set up of NN
+#     inputVectors_local,targets_local,neuralNetworkArchitecture_local = loadNNConfigB()
+#     nn = NeuralNetwork(neuralNetworkArchitecture_local)
+#     nn.train(inputVectors_local,targets_local)
+#     predictions = nn.predict(inputVectors_local)
+#     assert NeuralNetworkUtil.computePredictionAccuracy(predictions, targets_local) > 0.9
+
 
 def numericalGradient_test():
     def linear(x):
@@ -43,7 +71,7 @@ def gradientCheck(nn, vectorTheta, inputVectors, targets):
         return nn._NeuralNetwork__costFunctionOnly(vectorTheta, inputVectors, targets)
 
     # System under test
-    [J, grad] = nn._NeuralNetwork__costFunction(vectorTheta, inputVectors, targets)
+    [J, grad] = nn._NeuralNetwork__costFunction(vectorTheta, inputVectors, targets, 0.0)
     numericalGradient = computeNumericalGradient(vectorTheta, objectiveFunction)
     error = sum(abs(numericalGradient - grad)) / grad.__len__()
     print(array(zip(grad, numericalGradient)))
@@ -62,3 +90,9 @@ def computeNumericalGradient(vectorTheta, function):
         Jdown[index] = function(vectorTheta - pertubationVector)
         pertubationVector[index] = 0.0
     return 0.5 * (Jup - Jdown) / epsilon
+
+def initializeThetasForConfigB(nn):
+    nn._NeuralNetwork__thetas[0] = array([[-30,20,20],[10,-20,-20]])
+    nn._NeuralNetwork__thetas[1] = array([[-10,20,20]])
+    DEFAULT_DIRECTORY = './data/trainedData'
+    nn._NeuralNetwork__exportTrainedParametersToFiles(DEFAULT_DIRECTORY)

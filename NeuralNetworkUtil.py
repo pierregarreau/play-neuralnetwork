@@ -1,6 +1,6 @@
 
 from math import ceil,fabs
-from numpy import loadtxt, savetxt, empty, ones, array, append, reshape, eye, exp, log
+from numpy import loadtxt, savetxt, empty, ones, array, append, reshape, eye, exp, log,floor
 import numpy as np
 
 class NeuralNetworkUtil:
@@ -43,12 +43,15 @@ class NeuralNetworkUtil:
     def computePredictionAccuracy(predictedTarget,targets):
         # target is (n,1) with values in 1, ..., m,
         # predictedTarget is (n,m) with values between 0 and 1
-        predictedValues = NeuralNetworkUtil.transformClassificationTargetToValue(predictedTarget)
+        epsilon = 1e-6
+        targetValues = NeuralNetworkUtil.transformClassificationTargetToValue(targets)
+        predictionValues = NeuralNetworkUtil.transformClassificationTargetToValue(predictedTarget)
+        # print(np.array(zip(targetValues,targets, predictionValues, predictedTarget)))
         predictionAccuracy = 0.0
-        for prediction,target in zip(predictedValues,targets):
-            if abs(prediction - target) == 0:
+        for prediction,target in zip(predictionValues,targetValues):
+            if abs(prediction - target) < epsilon:
                 predictionAccuracy += 1.0
-        return predictionAccuracy / targets.__len__()
+        return predictionAccuracy / float(targets.__len__())
 
     @staticmethod
     def roll(listOfThetas):
@@ -82,7 +85,7 @@ class NeuralNetworkUtil:
         J = 0.0
         m = targets.__len__()
         for target, prediction in zip(targets, predictions):
-            J += np.sum( - target * log(prediction) - (1-target) * log(1 - prediction) )
+            J -= np.sum( target * log(prediction) + (1-target) * log(1 - prediction) )
         return J / m
 
     @staticmethod
@@ -93,4 +96,10 @@ class NeuralNetworkUtil:
 
     @staticmethod
     def transformClassificationTargetToValue(targets):
-        return array(map(lambda x : x.argmax()+1, targets))
+        if targets.shape.__len__() > 1:
+            if targets.shape[1] > 1:
+                return array(map(lambda x : x.argmax()+1, targets))
+            else:
+                return array(map(lambda x : floor(x + 0.5), targets))
+        else:
+            return array(map(lambda x : floor(x+0.5), targets))
