@@ -15,7 +15,7 @@ def loadNNConfigA0():
     return inputVectors,targets,neuralNetworkArchitecture
 
 def loadNNConfigA1():
-    sampleSize = 100
+    sampleSize = 1000
     inputVectors = empty((sampleSize,2))
     targets = empty((sampleSize,1))
     for sample in range(sampleSize):

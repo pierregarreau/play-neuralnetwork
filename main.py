@@ -1,34 +1,42 @@
 #! /usr/bin/env python
 __author__ = 'PierreGarreau'
 
-from NeuralNetwork import *
-from NeuralNetwork_test import initializeThetasForConfigB
+import matplotlib.pyplot as plt
 import pandas as pd
 
-from numpy import array
+from numpy import array,append,linspace,arange
+from sklearn.cross_validation import train_test_split
+
+from NeuralNetwork import *
+from NeuralNetwork_test import initializeThetasForConfigB
+from datadisplay import plot, plotCostFunction, plotCostFunctionVsRegParam, plotCostFunctionAfterTrainingVsRegParam
 from NeuralNetworkUtil import *
 from NeuralNetworkConfig import loadNNConfigA0, \
                                 loadNNConfigA1, \
                                 loadNNConfigB, \
                                 loadNNConfigC, \
-                                loadNNConfigD0
+                                loadNNConfigD0, \
+                                loadNNConfigD1
 
 DATA_DIRECTORY = './data'
 
 if __name__ == "__main__":
     # try:
-        inputVectors,targets,neuralNetworkArchitecture = loadNNConfigB()
+        inputVectors,targets,neuralNetworkArchitecture = loadNNConfigD1()
+        X_train, X_test, y_train, y_test = train_test_split(inputVectors, targets, train_size=0.75)
+
         nn = NeuralNetwork(neuralNetworkArchitecture)
-        nn.train(inputVectors,targets)
-        # initializeThetasForConfigB(nn)
-        predictions = nn.predict(inputVectors)
-        # computePredictionAccuracy
-        predictionAccuracy = NeuralNetworkUtil.computePredictionAccuracy(predictions,targets)
+        res = nn.train(X_train,y_train, 0.1)
+
+        predictions = nn.predict(X_test)
+        predictionAccuracy = NeuralNetworkUtil.computePredictionAccuracy(predictions,y_test)
         print('The NN predicted the output with {}% accuracy'.format(predictionAccuracy*100))
-        print('The trained parameters are: ', nn.getListOfThetas())
-        # print(zip(predictionValues,targetValues)[:10])
-        # print(array(zip(inputVectors[:10],targets,predictions[:10])))
-        # predictedTargets = xNor.predict(inputVectors)
-        # print(NeuralNetworkUtil.computePredictionAccuracy(predictedTargets, targets))
+
+        # Plotting routines Below
+        # regParam = 0.1
+        # plotCostFunction(regParam)
+        # plotCostFunctionAfterTrainingVsRegParam()
+        # plot(inputVectors,100)
+
     # except ValueError:
         # print(ValueError)

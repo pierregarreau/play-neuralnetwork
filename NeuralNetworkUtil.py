@@ -46,9 +46,9 @@ class NeuralNetworkUtil:
         epsilon = 1e-6
         targetValues = NeuralNetworkUtil.transformClassificationTargetToValue(targets)
         predictionValues = NeuralNetworkUtil.transformClassificationTargetToValue(predictedTarget)
-        # print(np.array(zip(targetValues,targets, predictionValues, predictedTarget)))
         predictionAccuracy = 0.0
         for prediction,target in zip(predictionValues,targetValues):
+            # print(prediction,target)
             if abs(prediction - target) < epsilon:
                 predictionAccuracy += 1.0
         return predictionAccuracy / float(targets.__len__())
@@ -75,7 +75,7 @@ class NeuralNetworkUtil:
             currentLayerSize = theta.shape[0]
             nextLayerSize = theta.shape[1]
             sizeFlatTheta = currentLayerSize * nextLayerSize
-            vectorTheta = vectorThetas[pointerFlatTheta:pointerFlatTheta+sizeFlatTheta]
+            vectorTheta = array(vectorThetas[pointerFlatTheta:pointerFlatTheta+sizeFlatTheta])
             listOfThetas[index] = vectorTheta.reshape(currentLayerSize, nextLayerSize)
             pointerFlatTheta += sizeFlatTheta
 

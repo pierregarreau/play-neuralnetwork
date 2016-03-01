@@ -3,8 +3,10 @@ import pandas as pd
 
 from NeuralNetworkUtil import *
 from random import uniform
-from math import sqrt
+from math import sqrt,fabs
 from scipy.optimize import minimize
+
+from decimal import Decimal
 
 DEFAULT_DIRECTORY = './data/trainedData'
 
@@ -20,11 +22,13 @@ class NeuralNetwork:
         targetPrediction = self.__feedForward(inputFeaturesVector)
         return targetPrediction[-1][1]
 
-    def train(self, inputFeaturesVector, outputTargetsVector, trainedParametersDirectory = DEFAULT_DIRECTORY):
+    def train(self, inputFeaturesVector, outputTargetsVector, regParam, trainedParametersDirectory = DEFAULT_DIRECTORY):
         # this function trains the neural network with backward propagation
         self.__initializeNeuralNetworkParameters()
-        self.__calibrate(inputFeaturesVector, outputTargetsVector)
+        res = self.__calibrate(inputFeaturesVector, outputTargetsVector, regParam)
+        print('Neural Network calibrate: ', res)
         self.__exportTrainedParametersToFiles(trainedParametersDirectory)
+        return res
 
     def getListOfThetas(self):
         return self.__thetas
@@ -76,14 +80,13 @@ class NeuralNetwork:
             epsilon = sqrt(6.0) / sqrt(currentLayerSize + nextLayerSize)
             self.__thetas[index] = epsilon * (np.random.uniform(0,2.0,(currentLayerSize,nextLayerSize)) - 1.0)
 
-    def __calibrate(self, inputFeaturesVector, outputTargetsVector):
-        regParam = 0.0
+    def __calibrate(self, inputFeaturesVector, outputTargetsVector, regParam):
         costFunction = lambda theta : self.__costFunction(theta, inputFeaturesVector, outputTargetsVector, regParam)
-        optimizationOptions = {'maxiter': 100}
+        optimizationOptions = {'maxiter': 600}
         thetaInit = NeuralNetworkUtil.roll(self.__thetas)
-        res = minimize(costFunction, thetaInit, jac=True, options=optimizationOptions)
-        print(res.message)
-        print(res.success, res.fun)
+        res = minimize(fun = costFunction, x0 = thetaInit, method = 'L-BFGS-B', options = optimizationOptions, jac = True)
+        # res = self.__GD(costFunction, thetaInit, {'maxiter': 400, 'learningRate': 5.0, 'tol': 1e-6})
+        return res
 
     def __costFunction(self, vectorTheta, inputFeaturesVector, outputTargetsVector, regParam):
         # Initialise
@@ -93,10 +96,11 @@ class NeuralNetwork:
         NeuralNetworkUtil.unroll(vectorTheta, self.__thetas)
         layerOutputs = self.__feedForward(inputFeaturesVector)
         J = NeuralNetworkUtil.logErrorClassificationFunction(layerOutputs[-1][1], outputTargetsVector)
-        # J += self.__addRegularizationParameter(m, regParam)
+        J += self.__addRegularizationParameter(m, regParam)
         # Cost function gradient
-        grad = []
+        flatGrad = []
         grads = self.__backPropagation(layerOutputs, outputTargetsVector, m, regParam)
+        self.__addRegularizationParameterGrad(m, regParam, grads)
         flatGrad = NeuralNetworkUtil.roll(grads)
         return [J, flatGrad]
 
@@ -128,8 +132,42 @@ class NeuralNetwork:
     def __addRegularizationParameter(self, m, regParam):
         Jreg = 0.0
         for theta in self.__thetas:
-            Jreg += 0.5 * regParam * np.sum(np.sum(theta[:,1:] * theta[:,1:])) / m
-        return Jreg
+            Jreg += np.sum(theta[:,1:] * theta[:,1:])
+        return 0.5 * regParam * Jreg / m
+
+    def __addRegularizationParameterGrad(self, m, regParam, thetaGradList):
+        numOfLayers = thetaGradList.__len__()
+        for index, theta in zip(range(numOfLayers), self.__thetas):
+            assert thetaGradList[index].shape == theta.shape
+            thetaGradList[index][:,1:] += regParam * theta[:,1:] / m
+
+    def __GD(self, costFunction, thetaInit, optimizationOptions):
+        # This function performs a simple gradient descent
+        learningRate = optimizationOptions['learningRate']
+        maxiter = optimizationOptions['maxiter']
+        tol = optimizationOptions['tol']
+        vectorTheta = thetaInit
+
+        res = {}
+        res['success'] = False
+        res['message'] = 'max iteration reached'
+
+        l2GradDelta = 0.0
+
+        for iterCounter in range(maxiter):
+            [cost, grad] = costFunction(vectorTheta)
+            vectorTheta -= learningRate * grad
+            l2GradDelta = np.sum(grad * grad)
+            if l2GradDelta < tol:
+                res['message'] = 'optim successful'
+                res['success'] = True
+                break
+
+        res['fun'] = cost
+        res['funDelta'] = l2GradDelta
+        res['numIter'] = iterCounter
+        return res
+
 
     # Below only used for computing numerial gradient (testing)
     def __feedForwardNoHistory(self, inputFeaturesVector):
