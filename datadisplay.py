@@ -12,6 +12,7 @@ from NeuralNetwork_test import initializeThetasForConfigB
 from numpy import array,append,arange,meshgrid
 
 def plot(dataset, numImages):
+    # This routines plots numImages images contained in the dataset
     squareSide = floor(sqrt(numImages))
     index = sample(range(dataset.__len__()), numImages)
 

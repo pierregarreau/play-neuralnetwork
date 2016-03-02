@@ -3,8 +3,9 @@ import pandas as pd
 
 from NeuralNetworkUtil import *
 from random import uniform
-from math import sqrt,fabs
+from math import sqrt,fabs, floor
 from scipy.optimize import minimize
+from random import sample
 
 from decimal import Decimal
 
@@ -22,7 +23,7 @@ class NeuralNetwork:
         targetPrediction = self.__feedForward(inputFeaturesVector)
         return targetPrediction[-1][1]
 
-    def train(self, inputFeaturesVector, outputTargetsVector, regParam, trainedParametersDirectory = DEFAULT_DIRECTORY):
+    def train(self, inputFeaturesVector, outputTargetsVector, regParam = 0.1, trainedParametersDirectory = DEFAULT_DIRECTORY):
         # this function trains the neural network with backward propagation
         self.__initializeNeuralNetworkParameters()
         res = self.__calibrate(inputFeaturesVector, outputTargetsVector, regParam)
@@ -81,23 +82,24 @@ class NeuralNetwork:
             self.__thetas[index] = epsilon * (np.random.uniform(0,2.0,(currentLayerSize,nextLayerSize)) - 1.0)
 
     def __calibrate(self, inputFeaturesVector, outputTargetsVector, regParam):
-        costFunction = lambda theta : self.__costFunction(theta, inputFeaturesVector, outputTargetsVector, regParam)
-        optimizationOptions = {'maxiter': 600}
+        costFunction = lambda theta, inputFeaturesVector, outputTargetsVector : self.__costFunction(theta, inputFeaturesVector, outputTargetsVector, regParam)
         thetaInit = NeuralNetworkUtil.roll(self.__thetas)
-        res = minimize(fun = costFunction, x0 = thetaInit, method = 'L-BFGS-B', options = optimizationOptions, jac = True)
-        # res = self.__GD(costFunction, thetaInit, {'maxiter': 400, 'learningRate': 5.0, 'tol': 1e-6})
+        minimizationOptions = {'optimizer': '', 'maxiter': 1000, 'tol': 1e-7}
+        res = self.__minimize(costFunction, thetaInit, minimizationOptions, inputFeaturesVector, outputTargetsVector)
         return res
 
-    def __costFunction(self, vectorTheta, inputFeaturesVector, outputTargetsVector, regParam):
-        # Initialise
+    def __costFunction(self, vectorTheta, inputFeaturesVector, outputTargetsVector, regParam = 0.1):
+        # costFunction returns the objective function and its gradient
+        # computed for the input feature vector and the targets. Optional parameters
+        # are the refularization parameters which makes the objective function more
+        # convex and the index which, if not empty, is used to reduce the training
+        # set.
         J = []
         m = inputFeaturesVector.__len__()
-        # Cost function
         NeuralNetworkUtil.unroll(vectorTheta, self.__thetas)
         layerOutputs = self.__feedForward(inputFeaturesVector)
         J = NeuralNetworkUtil.logErrorClassificationFunction(layerOutputs[-1][1], outputTargetsVector)
         J += self.__addRegularizationParameter(m, regParam)
-        # Cost function gradient
         flatGrad = []
         grads = self.__backPropagation(layerOutputs, outputTargetsVector, m, regParam)
         self.__addRegularizationParameterGrad(m, regParam, grads)
@@ -141,6 +143,27 @@ class NeuralNetwork:
             assert thetaGradList[index].shape == theta.shape
             thetaGradList[index][:,1:] += regParam * theta[:,1:] / m
 
+    def __minimize(self, costFunction, thetaInit, minimizationOptions, inputFeaturesVector, outputTargetsVector):
+        # factory routine decides which optimizer to use
+        # costFunction needs to return the objective value and the gradient in a list
+        optimizer = minimizationOptions['optimizer']
+        tol = minimizationOptions['tol']
+        optimizationOptions = {'maxiter': minimizationOptions['maxiter']}
+        if optimizer == 'CG':
+            costFunctionCG = lambda theta : costFunction(theta, inputFeaturesVector, outputTargetsVector)
+            optimizationOptions['learningRate'] = 1.0
+            optimizationOptions['tol'] = tol
+            res = self.__GD(costFunctionCG, thetaInit, optimizationOptions)
+        elif optimizer == 'BSGD':
+            optimizationOptions['learningRate'] = 1.0
+            optimizationOptions['tol'] = tol
+            res = self.__BSGD(costFunction, thetaInit, optimizationOptions, inputFeaturesVector, outputTargetsVector)
+        else:
+            optimizationOptions['gtol'] = tol
+            costFunctionCG = lambda theta : costFunction(theta, inputFeaturesVector, outputTargetsVector)
+            res = minimize(fun = costFunctionCG, x0 = thetaInit, method = 'L-BFGS-B', options = optimizationOptions, jac = True)
+        return res
+
     def __GD(self, costFunction, thetaInit, optimizationOptions):
         # This function performs a simple gradient descent
         learningRate = optimizationOptions['learningRate']
@@ -168,6 +191,35 @@ class NeuralNetwork:
         res['numIter'] = iterCounter
         return res
 
+    def __BSGD(self, costFunction, thetaInit, optimizationOptions, inputFeaturesVector, outputTargetsVector):
+        # This function performs a batch stochastic gradient descent
+        learningRate = optimizationOptions['learningRate']
+        maxiter = optimizationOptions['maxiter']
+        tol = optimizationOptions['tol']
+        vectorTheta = thetaInit
+
+        res = {}
+        res['success'] = False
+        res['message'] = 'max iteration reached'
+
+        l2GradDelta = 0.0
+        m = inputFeaturesVector.__len__()
+        batchSize = int(floor(m/2.0))
+
+        for iterCounter in range(maxiter):
+            batchIndex = sample(range(m), batchSize)
+            [cost, grad] = costFunction(vectorTheta, inputFeaturesVector[batchIndex], outputTargetsVector[batchIndex])
+            vectorTheta -= learningRate * grad
+            l2GradDelta = np.sum(grad * grad)
+            if l2GradDelta < tol:
+                res['message'] = 'optim successful'
+                res['success'] = True
+                break
+
+        res['fun'] = cost
+        res['funDelta'] = l2GradDelta
+        res['numIter'] = iterCounter
+        return res
 
     # Below only used for computing numerial gradient (testing)
     def __feedForwardNoHistory(self, inputFeaturesVector):

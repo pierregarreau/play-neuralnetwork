@@ -23,20 +23,20 @@ DATA_DIRECTORY = './data'
 if __name__ == "__main__":
     # try:
         inputVectors,targets,neuralNetworkArchitecture = loadNNConfigD1()
-        X_train, X_test, y_train, y_test = train_test_split(inputVectors, targets, train_size=0.75)
+        X_train, X_test, y_train, y_test = train_test_split(inputVectors, targets, train_size=0.85)
 
         nn = NeuralNetwork(neuralNetworkArchitecture)
-        res = nn.train(X_train,y_train, 0.1)
+        res = nn.train(X_train,y_train)
 
-        predictions = nn.predict(X_test)
-        predictionAccuracy = NeuralNetworkUtil.computePredictionAccuracy(predictions,y_test)
+        predictions = nn.predict(X_train)
+        predictionAccuracy = NeuralNetworkUtil.computePredictionAccuracy(predictions,y_train)
         print('The NN predicted the output with {}% accuracy'.format(predictionAccuracy*100))
 
         # Plotting routines Below
         # regParam = 0.1
         # plotCostFunction(regParam)
         # plotCostFunctionAfterTrainingVsRegParam()
-        # plot(inputVectors,100)
+        plot(inputVectors,100)
 
     # except ValueError:
         # print(ValueError)
