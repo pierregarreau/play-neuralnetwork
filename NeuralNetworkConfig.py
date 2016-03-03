@@ -3,6 +3,7 @@ from NeuralNetworkUtil import *
 import random
 
 DATA_DIRECTORY = './data'
+DEFAULT_DIRECTORY = './data/trainedData'
 
 def loadNNConfigA0():
     sampleSize = 100
@@ -34,6 +35,11 @@ def loadNNConfigB():
         targets[sample] = XNOR(inputVectors[sample][0], inputVectors[sample][1])
     neuralNetworkArchitecture = array([2,2,1])
     return inputVectors,targets,neuralNetworkArchitecture
+
+def initializeThetasForConfigB(nn):
+    nn._NeuralNetwork__thetas[0] = array([[-30,20,20],[10,-20,-20]])
+    nn._NeuralNetwork__thetas[1] = array([[-10,20,20]])
+    nn._NeuralNetwork__exportTrainedParametersToFiles(DEFAULT_DIRECTORY)
 
 def loadNNConfigC():
     # XNOR Network

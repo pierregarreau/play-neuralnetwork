@@ -1,6 +1,6 @@
 from numpy import array,sum,abs,zeros,equal
 from NeuralNetworkUtil import NeuralNetworkUtil
-from NeuralNetworkConfig import loadNNConfigA0, loadNNConfigA1, loadNNConfigB, loadNNConfigC
+from NeuralNetworkConfig import loadNNConfigA0, loadNNConfigA1, loadNNConfigB, loadNNConfigC, initializeThetasForConfigB
 from numpy import array
 
 # sut
@@ -93,9 +93,3 @@ def computeNumericalGradient(vectorTheta, function):
         Jdown[index] = function(vectorTheta - pertubationVector)
         pertubationVector[index] = 0.0
     return 0.5 * (Jup - Jdown) / epsilon
-
-def initializeThetasForConfigB(nn):
-    nn._NeuralNetwork__thetas[0] = array([[-30,20,20],[10,-20,-20]])
-    nn._NeuralNetwork__thetas[1] = array([[-10,20,20]])
-    DEFAULT_DIRECTORY = './data/trainedData'
-    nn._NeuralNetwork__exportTrainedParametersToFiles(DEFAULT_DIRECTORY)

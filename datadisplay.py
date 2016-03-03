@@ -1,13 +1,12 @@
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import numpy as np
+import NeuralNetworkConfig as nnConf
 
 from mpl_toolkits.mplot3d import Axes3D
 from random import sample
 from math import sqrt, floor
-from NeuralNetworkConfig import *
 from NeuralNetwork import NeuralNetwork
-from NeuralNetwork_test import initializeThetasForConfigB
 
 from numpy import array,append,arange,meshgrid
 
@@ -36,7 +35,7 @@ def plotCostFunction(regParam):
     # 2 parameters theta1 and theta2. This is for a given value of
     # the regularization parameter. For a high value of regParam, J should
     # converge to a paraboloid.
-    inputVectors,targets,neuralNetworkArchitecture = loadNNConfigB()
+    inputVectors,targets,neuralNetworkArchitecture = nnConf.loadNNConfigB()
     nn = NeuralNetwork(neuralNetworkArchitecture)
     X = arange(-15, 15.0, 0.5)
     Y = arange(-15, 15.0, 0.5)
@@ -55,7 +54,7 @@ def plotCostFunction(regParam):
 
 def plotCostFunctionVsRegParam():
     # This is a linear curve
-    inputVectors,targets,neuralNetworkArchitecture = loadNNConfigB()
+    inputVectors,targets,neuralNetworkArchitecture = nnConf.loadNNConfigB()
     nn = NeuralNetwork(neuralNetworkArchitecture)
     initializeThetasForConfigB(nn)
     vectorTheta = NeuralNetworkUtil.roll(nn.getListOfThetas())
@@ -67,7 +66,7 @@ def plotCostFunctionVsRegParam():
     plt.show()
 
 def plotCostFunctionAfterTrainingVsRegParam():
-    inputVectors,targets,neuralNetworkArchitecture = loadNNConfigA1()
+    inputVectors,targets,neuralNetworkArchitecture = nnConf.loadNNConfigA1()
     nn = NeuralNetwork(neuralNetworkArchitecture)
     regParamSet = arange(0.0, 10.0, 1.0)
     trainResults = list()

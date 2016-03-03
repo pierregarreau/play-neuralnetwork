@@ -1,4 +1,3 @@
-
 from numpy import array,empty,equal
 from NeuralNetworkUtil import NeuralNetworkUtil
 from NeuralNetworkConfig import loadNNConfigB, loadNNConfigC

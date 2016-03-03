@@ -8,12 +8,12 @@ from numpy import array,append,linspace,arange
 from sklearn.cross_validation import train_test_split
 
 from NeuralNetwork import *
-from NeuralNetwork_test import initializeThetasForConfigB
 from datadisplay import plot, plotCostFunction, plotCostFunctionVsRegParam, plotCostFunctionAfterTrainingVsRegParam
 from NeuralNetworkUtil import *
 from NeuralNetworkConfig import loadNNConfigA0, \
                                 loadNNConfigA1, \
                                 loadNNConfigB, \
+                                initializeThetasForConfigB, \
                                 loadNNConfigC, \
                                 loadNNConfigD0, \
                                 loadNNConfigD1
