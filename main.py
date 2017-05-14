@@ -22,9 +22,9 @@ DATA_DIRECTORY = './data'
 
 if __name__ == "__main__":
     # try:
-        inputVectors,targets,neuralNetworkArchitecture = loadNNConfigD1()
+        inputVectors,targets,neuralNetworkArchitecture = loadNNConfigD0()
         X_train, X_test, y_train, y_test = train_test_split(inputVectors, targets, train_size=0.85)
-
+        print(inputVectors.shape, targets.shape, neuralNetworkArchitecture)
         nn = NeuralNetwork(neuralNetworkArchitecture)
         res = nn.train(X_train,y_train)
 
@@ -36,7 +36,7 @@ if __name__ == "__main__":
         # regParam = 0.1
         # plotCostFunction(regParam)
         # plotCostFunctionAfterTrainingVsRegParam()
-        plot(inputVectors,100)
+        # plot(inputVectors,100)
 
     # except ValueError:
         # print(ValueError)
