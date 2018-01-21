@@ -1,2 +1,4 @@
 *.pyc
 .cache/
+Neural_Nets_Playground.egg-info
+.vscode

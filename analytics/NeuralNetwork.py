@@ -1,32 +1,40 @@
 import numpy as np
-import pandas as pd
 
-from NeuralNetworkUtil import *
 from random import uniform
-from math import sqrt,fabs, floor
+from math import sqrt, fabs, floor
 from scipy.optimize import minimize
 from random import sample
-
 from decimal import Decimal
+
+from analytics.NeuralNetworkUtil import *
+from data.load import Load
 
 DEFAULT_DIRECTORY = './data/trainedData'
 
-class NeuralNetwork:
 
+class NeuralNetwork:
     def __init__(self, numOfNodesPerLayer):
         # numOfNodesPerLayer is an array of integers giving the number of nodes per layer
         self.__construct(numOfNodesPerLayer)
 
-    def predict(self, inputFeaturesVector, trainedParametersDirectory = DEFAULT_DIRECTORY):
+    def predict(self,
+                inputFeaturesVector,
+                trainedParametersDirectory=DEFAULT_DIRECTORY):
         # this function performs forward propagation
-        self.__loadTrainedParametersFromFiles(trainedParametersDirectory)
+        # TODO why is the load from file below needed?
+        # self.__loadTrainedParametersFromFiles(trainedParametersDirectory)
         targetPrediction = self.__feedForward(inputFeaturesVector)
         return targetPrediction[-1][1]
 
-    def train(self, inputFeaturesVector, outputTargetsVector, regParam = 0.1, trainedParametersDirectory = DEFAULT_DIRECTORY):
+    def train(self,
+              inputFeaturesVector,
+              outputTargetsVector,
+              regParam=0.1,
+              trainedParametersDirectory=DEFAULT_DIRECTORY):
         # this function trains the neural network with backward propagation
         self.__initializeNeuralNetworkParameters()
-        res = self.__calibrate(inputFeaturesVector, outputTargetsVector, regParam)
+        res = self.__calibrate(inputFeaturesVector, outputTargetsVector,
+                               regParam)
         print('Neural Network calibrate: ', res)
         self.__exportTrainedParametersToFiles(trainedParametersDirectory)
         return res
@@ -39,47 +47,56 @@ class NeuralNetwork:
             print('Error : numOfNodesPerLayer needs to be a vector')
         else:
             self.__numLayers = numOfNodesPerLayer.size
-            self.__thetas = [np.empty((nextLayer,currentLayer+1))
-                for currentLayer, nextLayer in zip(numOfNodesPerLayer[:-1], numOfNodesPerLayer[1:])]
+            self.__thetas = [
+                np.empty((nextLayer, currentLayer + 1))
+                for currentLayer, nextLayer in zip(numOfNodesPerLayer[:-1],
+                                                   numOfNodesPerLayer[1:])
+            ]
 
-    def __loadTrainedParametersFromFiles(self,trainedParametersDirectory):
+    def __loadTrainedParametersFromFiles(self, trainedParametersDirectory):
         # TODO check if the dimensions of the loaded parameters are the ones announced
         # in the construction of the neural network
-        for counter in range(self.__numLayers-1):
-            trainedThetaFileName = trainedParametersDirectory + '/Theta' + str(counter) + '.txt'
-            theta = NeuralNetworkUtil.loadDataFromFile(trainedThetaFileName)
+        for counter in range(self.__numLayers - 1):
+            trainedThetaFileName = trainedParametersDirectory + '/Theta' + str(
+                counter) + '.txt'
+            theta = Load.from_file(trainedThetaFileName)
             if theta.shape.__len__() > 1:
                 self.__thetas[counter] = theta
             else:
-                self.__thetas[counter] = theta.reshape(1,theta.size)
+                self.__thetas[counter] = theta.reshape(1, theta.size)
 
-    def __exportTrainedParametersToFiles(self,trainedParametersDirectory):
+    def __exportTrainedParametersToFiles(self, trainedParametersDirectory):
         # TODO check if the dimensions of the loaded parameters are the ones announced
         # in the construction of the neural network
-        for counter,theta in zip(range(self.__numLayers-1), self.__thetas):
-            trainedThetaFileName = trainedParametersDirectory + '/Theta' + str(counter) + '.txt'
-            NeuralNetworkUtil.saveDataToFile(theta,trainedThetaFileName)
+        for counter, theta in zip(range(self.__numLayers - 1), self.__thetas):
+            trainedThetaFileName = trainedParametersDirectory + '/Theta' + str(
+                counter) + '.txt'
+            Load.to_file(theta, trainedThetaFileName)
 
     def __feedForward(self, inputFeaturesVector):
         a = NeuralNetworkUtil.addBiasTerm(inputFeaturesVector)
         layerOutputs = list()
-        layerOutputs.append(([],a))
+        layerOutputs.append(([], a))
         for layerIndex, theta in zip(range(self.__numLayers), self.__thetas):
-            z = np.dot(a,theta.transpose())
+            z = np.dot(a, theta.transpose())
+            # TODO refactor this sigmoid into function
+            sigmoid = 1.0 / (1.0 + np.exp(-z))
             if layerIndex < self.__numLayers - 2:
-                a = NeuralNetworkUtil.addBiasTerm(NeuralNetworkUtil.applyScalarFunction(z, NeuralNetworkUtil.sigmoid))
+                a = NeuralNetworkUtil.addBiasTerm(sigmoid)
             else:
-                a = NeuralNetworkUtil.applyScalarFunction(z, NeuralNetworkUtil.sigmoid)
-            layerOutputs.append((z,a))
+                a = sigmoid
+            layerOutputs.append((z, a))
         return layerOutputs
 
     def __initializeNeuralNetworkParameters(self):
         numOfMatrices = self.__thetas.__len__()
-        for index,theta in zip(range(numOfMatrices), self.__thetas):
+        for index, theta in zip(range(numOfMatrices), self.__thetas):
             currentLayerSize = theta.shape[0]
             nextLayerSize = theta.shape[1]
             epsilon = sqrt(6.0) / sqrt(currentLayerSize + nextLayerSize)
-            self.__thetas[index] = epsilon * (np.random.uniform(0,2.0,(currentLayerSize,nextLayerSize)) - 1.0)
+            self.__thetas[index] = epsilon * (
+                np.random.uniform(0, 2.0,
+                                  (currentLayerSize, nextLayerSize)) - 1.0)
 
     def __calibrate(self, inputFeaturesVector, outputTargetsVector, regParam):
         costFunction = lambda theta, inputFeaturesVector, outputTargetsVector : self.__costFunction(theta, inputFeaturesVector, outputTargetsVector, regParam)
@@ -98,10 +115,12 @@ class NeuralNetwork:
         m = inputFeaturesVector.__len__()
         NeuralNetworkUtil.unroll(vectorTheta, self.__thetas)
         layerOutputs = self.__feedForward(inputFeaturesVector)
-        J = NeuralNetworkUtil.logErrorClassificationFunction(layerOutputs[-1][1], outputTargetsVector)
+        J = NeuralNetworkUtil.logErrorClassificationFunction(
+            layerOutputs[-1][1], outputTargetsVector)
         J += self.__addRegularizationParameter(m, regParam)
         flatGrad = []
-        grads = self.__backPropagation(layerOutputs, outputTargetsVector, m, regParam)
+        grads = self.__backPropagation(layerOutputs, outputTargetsVector, m,
+                                       regParam)
         self.__addRegularizationParameterGrad(m, regParam, grads)
         flatGrad = NeuralNetworkUtil.roll(grads)
         return [J, flatGrad]
