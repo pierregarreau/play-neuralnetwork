@@ -2,6 +2,7 @@ import numpy as np
 
 from abc import ABCMeta
 from typing import Dict, List, Callable
+from functools import reduce
 
 from random import uniform
 from math import sqrt, fabs, floor
@@ -36,14 +37,15 @@ class Model(ABCMeta):
 
 
 class NeuralNet(Model):
-    def __init__(self, layer_sizes: List):
-        if len(layer_sizes) == 0:
+    def __init__(self, layers: List):
+        if len(layers) == 0:
             print('Error: need at least one layer to build this network')
         else:
-            self.n_layers = len(layer_sizes)
-            self.thetas = [
-                np.empty((next_layer, layer + 1))
-                for layer, next_layer in zip(layer_sizes[:-1], layer_sizes[1:])]
+            self.layers = layers
+            self.n_layers = len(layers)
+            self.n_parameters = reduce(lambda x, y: (x+1)*y, layers)
+            self.theta = np.empty((self.n_parameters))
+            self.thetas = self._decompose(self.theta)
 
     def predict(self, features: np.array) -> np.array:
         targetPrediction = self._feed_forward(features)
@@ -53,15 +55,29 @@ class NeuralNet(Model):
         # TODO STOPPED HERE ---
         # this function trains the neural network with backward propagation
         # minimizationOptions = {'optimizer': '', 'maxiter': 1000, 'tol': 1e-7}
-        init = self._init_thetas() # Careful roll / unroll
+        init = self._random_init() # Careful roll / unroll
         objective = lambda theta: self.objective(theta, features, labels, loss)
         res = optimizer.minimize(objective, init)
         # print('Neural Network calibrate: ', res)
         # self.__exportTrainedParametersToFiles(trainedParametersDirectory)
         return res
 
-    def getListOfThetas(self):
-        return self.thetas
+    def _decompose(self, theta: np.array) -> [List[np.array], List[int, int]]:
+        thetas = []
+        idx = 0
+        for layer, next_layer in zip(self.layers[:-1], self.layers[1:]):
+            n_params = next_layer * (layer + 1)
+            thetas.append(theta[idx:idx+n_params].reshape((next_layer, layer + 1)))
+            idx += n_params
+        return thetas
+
+    def _random_init(self) -> np.array:
+        for index, theta in zip(range(self.n_layers), self.thetas):
+            current_layerSize = theta.shape[0]
+            next_layerSize = theta.shape[1]
+            epsilon = sqrt(6.0) / sqrt(current_layerSize + next_layerSize)
+            self.thetas[index] = epsilon * (np.random.uniform(0, 2.0, (current_layerSize, next_layerSize)) - 1.0)
+            return roll(self.thetas)
 
     def _feed_forward(self, features: np.array) -> np.array:
         a = addBiasTerm(features)
@@ -78,22 +94,7 @@ class NeuralNet(Model):
             predicted.append((z, a))
         return predicted
 
-    def _init_thetas(self) -> np.array:
-        numOfMatrices = self.thetas.__len__()
-        for index, theta in zip(range(numOfMatrices), self.thetas):
-            current_layerSize = theta.shape[0]
-            next_layerSize = theta.shape[1]
-            epsilon = sqrt(6.0) / sqrt(current_layerSize + next_layerSize)
-            self.thetas[index] = epsilon * (np.random.uniform(0, 2.0, (current_layerSize, next_layerSize)) - 1.0)
-            return roll(self.thetas)
-
-    def __calibrate(self, features, labels, omega):
-        # previous fit
-        thetaInit = roll(self.thetas)
-        res = self.__minimize(costFunction, thetaInit, minimizationOptions, features, labels)
-        return res
-
-    def objective(self, flat_thetas, features, labels, loss: Callable[[np.array, np.array], [float]], omega = 0.1) -> List[np.array, np.array]:
+    def objective(self, theta, features, labels, loss: Callable[[np.array, np.array], [float]], omega = 0.1) -> List[np.array, np.array]:
         # costFunction returns the objective function and its gradient
         # computed for the input feature vector and the targets. Optional parameters
         # are the refularization parameters which makes the objective function more
@@ -103,64 +104,65 @@ class NeuralNet(Model):
         J = []
         dJ = []
         m = features.__len__()
-        unroll(flat_thetas, self.thetas)
+        self.theta = theta
+        self.thetas = self._decompose(theta)
 
         # predict + compute loss + regularization = objective
-        predicted = self.predict(features)
-        J = loss(predicted, labels)
+        predicted = self._feed_forward(features)
+        J = loss(predicted[-1][1], labels)
         self.regularize(J, m, omega)
 
         # backprop + regularization = Dobjective
-        flatGrad = []
-        dJ = self._back_propagate(predicted, labels, m, omega)
-        self.regularize_gradient(dJ, m, omega)
-        flatGrad = roll(dJ)
+        dJ, dJs = self._back_propagate(predicted, labels, m, omega)
+        self.regularize_gradient(dJs, m, omega)
+        # flatGrad = roll(dJ)
 
-        return [J, flatGrad]
+        return [J, dJ]
 
     def _back_propagate(self, predicted, labels, m, omega):
         # Initialization
         numObservations = labels.shape[0]
-        numLayers = predicted.__len__()
-        grads = []
+        grad = np.empty(self.n_parameters)
+        grads = self._decompose(grad)
+        # grads = []
 
         # First iteration
         delta = predicted[-1][1] - labels
         a2withBias = predicted[-2][1]
-        grad = np.dot(delta.transpose(), a2withBias) / numObservations
-        grad += omega / m * self.thetas[-1]
-        grads.append(grad)
+        grads[-1] = np.dot(delta.transpose(), a2withBias) / numObservations
+        grads[-1] += omega / m * self.thetas[-1]
+        # grads.append(grad)
 
         # Other layers
         for index, theta in reversed(list(enumerate(self.thetas))):
             if index > 0:
                 propError = np.dot(delta, theta)
                 gZ = NeuralNetworkUtil.applyScalarFunction(predicted[index][0], NeuralNetworkUtil.sigmoidGrad)
-                delta = np.multiply(gZ,propError[:,1:])
-                grad = np.dot(delta.transpose(),predicted[index-1][1]) / numObservations
-                grad += omega / m * self.thetas[index-1]
-                grads.insert(0,grad)
+                delta = np.multiply(gZ, propError[:, 1:])
+                grads[index-1] = np.dot(delta.transpose(), predicted[index-1][1]) / numObservations
+                grads[index-1] += omega / m * self.thetas[index-1]
+                # grads.insert(0, grad)
 
-        return grads
+        return grad, grads
 
-    def regularize(self, dJ: float, m: int, omega) -> float:
+    def regularize(self, J: float, m: int, omega) -> float:
         Jreg = 0.0
         for theta in self.thetas:
             Jreg += np.sum(theta[:, 1:] * theta[:, 1:])
-        dJ += 0.5 * omega * Jreg / m
+        J += 0.5 * omega * Jreg / m
 
-    def regularize_gradient(self, dJ, m, omega):
-        numOfLayers = dJ.__len__()
-        for index, theta in zip(range(numOfLayers), self.thetas):
-            assert dJ[index].shape == theta.shape
-            dJ[index][:, 1:] += omega * theta[:, 1:] / m
+    def regularize_gradient(self, dJs: np.array, m, omega):
+        # for index, theta in zip(range(self.n_layers), self.thetas):
+        for idx in range(self.n_layers):
+            assert dJs[idx].shape == self.thetas[idx].shape
+            dJs[idx][:, 1:] += omega * self.thetas[:, 1:] / m
 
     def __minimize(self, costFunction, thetaInit, minimizationOptions, features, labels):
         # factory routine decides which optimizer to use
         # costFunction needs to return the objective value and the gradient in a list
         #
         # This function has been retired
-        # 
+        #
         optimizer = minimizationOptions['optimizer']
         tol = minimizationOptions['tol']
         optimizationOptions = {'maxiter': minimizationOptions['maxiter']}
@@ -213,9 +215,9 @@ class NeuralNet(Model):
             a = NeuralNetworkUtil.applyScalarFunction(z, NeuralNetworkUtil.sigmoid)
         return (z,a)
 
-    def objectiveOnly(self, flat_thetas, features, labels):
+    def objectiveOnly(self, theta, features, labels):
         J = []
-        unroll(flat_thetas, self.thetas)
+        unroll(theta, self.thetas)
         predicted = self._feed_forwardNoHistory(features)
         J = NeuralNetworkUtil.logErrorClassificationFunction(predicted[1], labels)
         return J
