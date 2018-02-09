@@ -1,6 +1,41 @@
-from math import ceil, fabs
-from numpy import loadtxt, savetxt, empty, ones, array, append, reshape, eye, exp, log, floor
 import numpy as np
+
+
+class Activation:
+    @staticmethod
+    def sigmoid(z):
+        return 1.0 / (1.0 + np.exp(-z))
+
+    @staticmethod
+    def dsigmoid(z):
+        return Activation.sigmoid(z) * (1.0 - Activation.sigmoid(z))
+
+
+class Loss:
+    @staticmethod
+    def crossentropy(predictions: np.array, targets: np.array) -> float:
+        assert predictions.__len__() == targets.__len__()
+        J = 0.0
+        m = targets.__len__()
+        for target, prediction in zip(targets, predictions):
+            J -= np.sum(target * np.log(prediction) + (1-target) * np.log(1 - prediction))
+        return J / m
+
+    @staticmethod
+    def accuracy(predictions: np.array, targets: np.array) -> float:
+        # target is (n,1) with values in 1, ..., m,
+        # predictions is (n,m) with values between 0 and 1
+        epsilon = 1e-6
+        targetValues = NeuralNetworkUtil.transformClassificationTargetToValue(
+            targets)
+        predictionValues = NeuralNetworkUtil.transformClassificationTargetToValue(
+            predictions)
+        predictionAccuracy = 0.0
+        for prediction, target in zip(predictionValues, targetValues):
+            # print(prediction,target)
+            if abs(prediction - target) < epsilon:
+                predictionAccuracy += 1.0
+        return predictionAccuracy / float(targets.__len__())
 
 
 class NeuralNetworkUtil:
@@ -8,24 +43,28 @@ class NeuralNetworkUtil:
         pass
 
     @staticmethod
-    def sigmoid(z):
-        return 1.0 / (1.0 + exp(-z))
-
-    @staticmethod
-    def sigmoidGrad(z):
-        return NeuralNetworkUtil.sigmoid(z) * (
-            1.0 - NeuralNetworkUtil.sigmoid(z))
-
-    @staticmethod
-    def addBiasTerm(layerInput):
+    def add_bias(features: np.array) -> np.array:
         # This function inserts a row of ones at position 0
-        colSize = layerInput.shape[0]
-        rowSize = layerInput.shape[1]
-        layerInputWithBias = empty((colSize, rowSize + 1))
-        layerInputWithBias[:, 0] = ones(colSize)
-        layerInputWithBias[:, 1:] = layerInput
-        return layerInputWithBias
+        cols = features.shape[0]
+        rows = features.shape[1]
+        features_w_bias = np.empty((cols, rows + 1))
+        features_w_bias[:, 0] = np.ones(cols)
+        features_w_bias[:, 1:] = features
+        return features_w_bias
 
+    @staticmethod
+    def transformClassificationTargetToValue(targets):
+        # TODO rename
+        if targets.shape.__len__() > 1:
+            if targets.shape[1] > 1:
+                return np.array(list(map(lambda x: x.argmax() + 1, targets)))
+            else:
+                return np.array(list(map(lambda x: np.floor(x + 0.5), targets)))
+        else:
+            return np.array(list(map(lambda x: np.floor(x + 0.5), targets)))
+
+    # deprecated below
+    # ////////////////
     @staticmethod
     def applyScalarFunction(arrayInput, function):
         result = np.array(map(lambda value: function(value), arrayInput))
@@ -35,30 +74,14 @@ class NeuralNetworkUtil:
         return result
 
     @staticmethod
-    def computePredictionAccuracy(predictedTarget, targets):
-        # target is (n,1) with values in 1, ..., m,
-        # predictedTarget is (n,m) with values between 0 and 1
-        epsilon = 1e-6
-        targetValues = NeuralNetworkUtil.transformClassificationTargetToValue(
-            targets)
-        predictionValues = NeuralNetworkUtil.transformClassificationTargetToValue(
-            predictedTarget)
-        predictionAccuracy = 0.0
-        for prediction, target in zip(predictionValues, targetValues):
-            # print(prediction,target)
-            if abs(prediction - target) < epsilon:
-                predictionAccuracy += 1.0
-        return predictionAccuracy / float(targets.__len__())
-
-    @staticmethod
     def roll(listOfThetas):
         # this function transforms a list of matrices into a vector
         # TODO write test for roll unroll
-        vectorThetas = array([])
+        vectorThetas = np.array([])
         for theta in listOfThetas:
             currentLayerSize = theta.shape[0]
             nextLayerSize = theta.shape[1]
-            vectorThetas = append(vectorThetas,
+            vectorThetas = np.append(vectorThetas,
                                   theta.reshape(currentLayerSize,
                                                 nextLayerSize))
         return vectorThetas
@@ -74,41 +97,8 @@ class NeuralNetworkUtil:
             currentLayerSize = theta.shape[0]
             nextLayerSize = theta.shape[1]
             sizeFlatTheta = currentLayerSize * nextLayerSize
-            vectorTheta = array(vectorThetas[pointerFlatTheta:
+            vectorTheta = np.array(vectorThetas[pointerFlatTheta:
                                              pointerFlatTheta + sizeFlatTheta])
             listOfThetas[index] = vectorTheta.reshape(currentLayerSize,
                                                       nextLayerSize)
             pointerFlatTheta += sizeFlatTheta
-
-    @staticmethod
-    def logErrorClassificationFunction(predictions, targets):
-        assert predictions.__len__() == targets.__len__()
-        J = 0.0
-        m = targets.__len__()
-        for target, prediction in zip(targets, predictions):
-            J -= np.sum(target * log(prediction) + (1-target) * log(1 - prediction) )
-        return J / m
-
-    @staticmethod
-    def transformClassificationTargetToValue(targets):
-        if targets.shape.__len__() > 1:
-            if targets.shape[1] > 1:
-                return np.array(list(map(lambda x: x.argmax() + 1, targets)))
-            else:
-                return np.array(list(map(lambda x: np.floor(x + 0.5), targets)))
-        else:
-            return np.array(list(map(lambda x: np.floor(x + 0.5), targets)))
-
-    @staticmethod
-    def computeNumericalGradient(vectorTheta, function):
-        epsilon = 1e-4
-        numOfPoints = vectorTheta.__len__()
-        pertubationVector = np.zeros(numOfPoints)
-        Jup = np.zeros(numOfPoints)
-        Jdown = np.zeros(numOfPoints)
-        for index in range(numOfPoints):
-            pertubationVector[index] = epsilon
-            Jup[index] = function(vectorTheta + pertubationVector)
-            Jdown[index] = function(vectorTheta - pertubationVector)
-            pertubationVector[index] = 0.0
-        return 0.5 * (Jup - Jdown) / epsilon

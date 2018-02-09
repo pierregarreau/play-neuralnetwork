@@ -1,6 +1,6 @@
 import numpy as np
 
-from analytics.NeuralNetworkUtil import NeuralNetworkUtil
+from analytics.util import NeuralNetworkUtil
 from data.load import Load
 
 inputVectors, targets = Load.labelled_xnor_nor()
@@ -29,13 +29,13 @@ def numericalGradient_test():
 
     tolerance = 1e-8
     for sut, expected in zip(
-            NeuralNetworkUtil.computeNumericalGradient(x, linear), DlinearDx):
+            NeuralNetworkUtil.numerical_gradient(x, linear), DlinearDx):
         assert np.abs(sut - expected) < tolerance
     for sut, expected in zip(
-            NeuralNetworkUtil.computeNumericalGradient(x, square), DsquareDx):
+            NeuralNetworkUtil.numerical_gradient(x, square), DsquareDx):
         assert np.abs(sut - expected) < tolerance
     for sut, expected in zip(
-            NeuralNetworkUtil.computeNumericalGradient(x, cube), DcubeDx):
+            NeuralNetworkUtil.numerical_gradient(x, cube), DcubeDx):
         assert np.abs(sut - expected) < tolerance
 
 
