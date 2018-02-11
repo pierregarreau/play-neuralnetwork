@@ -2,6 +2,7 @@ import numpy as np
 
 from analytics.model import NeuralNet
 from analytics.util import Loss
+from analytics.optimizer import GradientDescent
 from data.load import Load
 
 
@@ -23,6 +24,23 @@ def test_predict():
     predictions = nn.predict(features)
     print(np.array(zip(predictions, labels)))
     assert Loss.accuracy(predictions, labels) > 0.99
+
+
+def test_fid():
+    features, labels = Load.labelled_xnor(sample_size=500)
+    arxitecture = [2, 2, 1]
+    nn = NeuralNet(arxitecture)
+    options = {
+        'learningRate': 1.0,
+        'maxiter': 500,
+        'tol': 1e-9,
+        'jac': True
+    }
+    optimizer = GradientDescent(options)
+    loss = Loss.crossentropy
+    res = nn.fit(features, labels, optimizer, loss)
+    print(res.__dict__())
+    assert False
 
 
 # def backpropGradientCheck_test():

@@ -16,6 +16,18 @@ class Result:
         self.status = 0
         self.success = False
 
+    def __dict__(self):
+        return {
+            'fun': self.fun,
+            'x': self.x,
+            'jac': self.jac,
+            'message': self.message,
+            'nfev': self.nfev,
+            'nit': self.nit,
+            'status': self.status,
+            'success': self.success
+        }
+        
 
 class Optimizer(metaclass=ABCMeta):
     def __init__(self, options: Dict):
@@ -77,11 +89,29 @@ class GradientDescent(Optimizer):
         return self.res
 
 
+class LBFGSB(Optimizer):
+    def __init__(self, options: Dict = {}):
+        super(LBFGSB, self).__init__(options)
+
+    def minimize(self, objective: Callable[[np.ndarray], float], init: np.ndarray) -> Dict:
+        res = scioptim.minimize(
+            fun=objective,
+            x0=init,
+            method='L-BFGS-B',
+            options=self.options
+        )
+        return res
+
+# Deprecated
+# ===========
+
 class BSGD(Optimizer):
+    # TODO this does not works
     def __init__(self, options: Dict):
         super(BSGD, self).__init__(options)
 
-    def minimize(self, objective: Callable[[np.ndarray], float], init: np.ndarray) -> Dict:
+    def minimize(self, objective: Callable[[np.ndarray], float],
+                 init: np.ndarray) -> Dict:
         '''
         This function performs a batch stochastic gradient descent
         --> will not work as is for now
@@ -98,13 +128,14 @@ class BSGD(Optimizer):
         # below only specific to SGD
         l2GradDelta = 0.0
         m = features.__len__()
-        batchSize = int(floor(m/2.0))
+        batchSize = int(floor(m / 2.0))
         # end specfic
 
         for iterCounter in range(maxiter):
             # below only specific to SGD
             batchIndex = sample(range(m), batchSize)
-            [cost, grad] = objective(theta, features[batchIndex], labels[batchIndex])
+            [cost, grad] = objective(theta, features[batchIndex],
+                                     labels[batchIndex])
             # end specfic
             theta -= learningRate * grad
             l2GradDelta = np.sum(grad * grad)
@@ -116,18 +147,4 @@ class BSGD(Optimizer):
         res['fun'] = cost
         res['funDelta'] = l2GradDelta
         res['numIter'] = iterCounter
-        return res
-
-
-class LBFGSB(Optimizer):
-    def __init__(self, options: Dict = {}):
-        super(LBFGSB, self).__init__(options)
-
-    def minimize(self, objective: Callable[[np.ndarray], float], init: np.ndarray) -> Dict:
-        res = scioptim.minimize(
-            fun=objective,
-            x0=init,
-            method='L-BFGS-B',
-            options=self.options
-        )
         return res

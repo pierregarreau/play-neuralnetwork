@@ -156,9 +156,9 @@ class NeuralNet(Model):
 
     def regularize_gradient(self, dJs: np.ndarray, m, omega):
         # for index, theta in zip(range(self.n_layers), self.thetas):
-        for idx in range(self.n_layers):
+        for idx in range(self.n_layers-1):
             assert dJs[idx].shape == self.thetas[idx].shape
-            dJs[idx][:, 1:] += omega * self.thetas[:, 1:] / m
+            dJs[idx][:, 1:] += omega * self.thetas[idx][:, 1:] / m
 
     def __minimize(self, costFunction, thetaInit, minimizationOptions, features, labels):
         # factory routine decides which optimizer to use
