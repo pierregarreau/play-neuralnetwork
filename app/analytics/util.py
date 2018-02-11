@@ -13,16 +13,23 @@ class Activation:
 
 class Loss:
     @staticmethod
-    def crossentropy(predictions: np.array, targets: np.array) -> float:
+    def crossentropy(predictions: np.ndarray, targets: np.ndarray) -> float:
         assert predictions.__len__() == targets.__len__()
         J = 0.0
         m = targets.__len__()
         for target, prediction in zip(targets, predictions):
             J -= np.sum(target * np.log(prediction) + (1-target) * np.log(1 - prediction))
         return J / m
+    
+    @staticmethod
+    def squared_error(predictions: np.ndarray, targets: np.ndarray) -> float:
+        assert predictions.__len__() == targets.__len__()
+        m = targets.__len__()
+        diff = (predictions - targets)
+        return sum(diff[:] * diff[:]) / 2.0 / m
 
     @staticmethod
-    def accuracy(predictions: np.array, targets: np.array) -> float:
+    def accuracy(predictions: np.ndarray, targets: np.ndarray) -> float:
         # target is (n,1) with values in 1, ..., m,
         # predictions is (n,m) with values between 0 and 1
         epsilon = 1e-6
@@ -43,7 +50,7 @@ class NeuralNetworkUtil:
         pass
 
     @staticmethod
-    def add_bias(features: np.array) -> np.array:
+    def add_bias(features: np.ndarray) -> np.array:
         # This function inserts a row of ones at position 0
         cols = features.shape[0]
         rows = features.shape[1]

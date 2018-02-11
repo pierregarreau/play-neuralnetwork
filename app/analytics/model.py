@@ -51,14 +51,17 @@ class NeuralNet(Model):
         targetPrediction = self._feed_forward(features)
         return targetPrediction[-1][1]
 
-    def fit(self, features: np.ndarray, labels: np.ndarray, optimizer: Optimizer, loss: Callable[[np.ndarray], float]) -> Dict:
+    def fit(self, features: np.ndarray, labels: np.ndarray, optim: Optimizer, loss: Callable[[np.ndarray], float]) -> Dict:
         # TODO STOPPED HERE ---
         # this function trains the neural network with backward propagation
         # minimizationOptions = {'optimizer': '', 'maxiter': 1000, 'tol': 1e-7}
         self._random_init()
         # Careful roll / unroll
-        objective = lambda theta: self.objective(theta, features, labels, loss)
-        res = optimizer.minimize(objective, self.theta)
+
+        def objective(theta):
+            return self.objective(theta, features, labels, loss)
+
+        res = optim.minimize(objective=objective, init=self.theta)
         # print('Neural Network calibrate: ', res)
         # self.__exportTrainedParametersToFiles(trainedParametersDirectory)
         return res
