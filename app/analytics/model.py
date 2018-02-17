@@ -44,7 +44,7 @@ class NeuralNet(Model):
             self.layers = layers
             self.n_layers = len(layers)
             self.n_parameters = sum([next_layer * (layer + 1) for layer, next_layer in zip(layers[:-1], layers[1:])])
-            self.theta = np.empty((self.n_parameters))
+            self.theta = np.empty(self.n_parameters)
             self.thetas = self._decompose(self.theta)
 
     def predict(self, features: np.ndarray) -> np.ndarray:
@@ -98,12 +98,6 @@ class NeuralNet(Model):
         return predicted
 
     def objective(self, theta, features, labels, loss: Callable[[np.ndarray], float], omega: float = 0.1) -> List[np.ndarray]:
-        # costFunction returns the objective function and its gradient
-        # computed for the input feature vector and the targets. Optional parameters
-        # are the refularization parameters which makes the objective function more
-        # convex and the index which, if not empty, is used to reduce the training
-        # set.
-        # TODO roll / unroll needs replacing with reshape only
         J = []
         dJ = []
         m = features.__len__()
@@ -122,12 +116,11 @@ class NeuralNet(Model):
 
         return [J, dJ]
 
-    def _back_propagate(self, predicted, labels, m, omega):
+    def _back_propagate(self, predicted: np.ndarray, labels: np.ndarray, m: int, omega: float = 0.1) -> [np.ndarray, List[np.ndarray]]:
         # Initialization
         numObservations = labels.shape[0]
         grad = np.empty(self.n_parameters)
         grads = self._decompose(grad)
-        # grads = []
 
         # First iteration
         delta = predicted[-1][1] - labels
@@ -156,9 +149,12 @@ class NeuralNet(Model):
 
     def regularize_gradient(self, dJs: np.ndarray, m, omega):
         # for index, theta in zip(range(self.n_layers), self.thetas):
-        for idx in range(self.n_layers-1):
-            assert dJs[idx].shape == self.thetas[idx].shape
-            dJs[idx][:, 1:] += omega * self.thetas[idx][:, 1:] / m
+        assert len(dJs) == len(self.thetas)
+        for dJ, theta in zip(dJs, self.thetas):
+        # for idx in range(self.n_layers-1):
+            # assert dJs[idx].shape == self.thetas[idx].shape
+            assert dJ.shape == theta.shape
+            dJ[:, 1:] += omega * theta[:, 1:] / m
 
     def __minimize(self, costFunction, thetaInit, minimizationOptions, features, labels):
         # factory routine decides which optimizer to use

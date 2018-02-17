@@ -1,7 +1,7 @@
 import numpy as np
 import random as rnd
 
-from data.util import transform_integer_class_to_binary_vector, not_x_and_not_y, xnor, nor
+from data.util import integer_class_to_binary_vector, not_x_and_not_y, xnor, nor
 
 DATA_DIRECTORY = 'data/'
 DEFAULT_DIRECTORY = 'data/trainedData/'
@@ -41,7 +41,7 @@ class Load:
                 nor(features[sample][0], features[sample][1])
             ]
         # neuralNetworkArchitecture = np.array([2,2,2])
-        return features, labels
+        return np.array(features), np.array(labels)
 
     @staticmethod
     def mnist(sample_size: int = None) -> [np.array, np.array]:
@@ -50,7 +50,7 @@ class Load:
         labels_file = DATA_DIRECTORY + 'targetVectors.txt'
         features = Load.from_file(features_file)
         labels = Load.from_file(labels_file)
-        labels = transform_integer_class_to_binary_vector(labels)
+        labels = integer_class_to_binary_vector(labels)
         if sample_size:
             return features[:sample_size], labels[:sample_size]
         return features, labels

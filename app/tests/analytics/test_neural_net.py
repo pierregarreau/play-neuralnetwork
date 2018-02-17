@@ -26,7 +26,7 @@ def test_predict():
     assert Loss.accuracy(predictions, labels) > 0.99
 
 
-def test_fid():
+def test_fit():
     features, labels = Load.labelled_xnor(sample_size=500)
     arxitecture = [2, 2, 1]
     nn = NeuralNet(arxitecture)

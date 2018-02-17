@@ -20,7 +20,7 @@ class Loss:
         for target, prediction in zip(targets, predictions):
             J -= np.sum(target * np.log(prediction) + (1-target) * np.log(1 - prediction))
         return J / m
-    
+
     @staticmethod
     def squared_error(predictions: np.ndarray, targets: np.ndarray) -> float:
         assert predictions.__len__() == targets.__len__()
@@ -58,17 +58,6 @@ class NeuralNetworkUtil:
         features_w_bias[:, 0] = np.ones(cols)
         features_w_bias[:, 1:] = features
         return features_w_bias
-
-    @staticmethod
-    def transformClassificationTargetToValue(targets):
-        # TODO rename
-        if targets.shape.__len__() > 1:
-            if targets.shape[1] > 1:
-                return np.array(list(map(lambda x: x.argmax() + 1, targets)))
-            else:
-                return np.array(list(map(lambda x: np.floor(x + 0.5), targets)))
-        else:
-            return np.array(list(map(lambda x: np.floor(x + 0.5), targets)))
 
     # deprecated below
     # ////////////////
