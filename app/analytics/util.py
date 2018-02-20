@@ -1,5 +1,7 @@
 import numpy as np
 
+from data.util import binary_vector_to_class
+
 
 class Activation:
     @staticmethod
@@ -33,10 +35,8 @@ class Loss:
         # target is (n,1) with values in 1, ..., m,
         # predictions is (n,m) with values between 0 and 1
         epsilon = 1e-6
-        targetValues = NeuralNetworkUtil.transformClassificationTargetToValue(
-            targets)
-        predictionValues = NeuralNetworkUtil.transformClassificationTargetToValue(
-            predictions)
+        targetValues = binary_vector_to_class(targets)
+        predictionValues = binary_vector_to_class(predictions)
         predictionAccuracy = 0.0
         for prediction, target in zip(predictionValues, targetValues):
             # print(prediction,target)

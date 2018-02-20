@@ -1,18 +1,45 @@
 import numpy as np
 
 from analytics.util import Loss
-from analytics.optimizer import LBFGSB, GradientDescent
+from analytics.optimizer import LBFGSB, GradientDescent, Optimizer
 
 
-def linear(features, theta):
+def linear_regression(features, theta):
     return theta[1] * features + theta[0]
+
+
+def test_numerical_gradient():
+    def linear(x: np.ndarray) -> float:
+        return np.sum(x)
+
+    def square(x: np.ndarray) -> float:
+        return np.sum(x * x) / 2.0
+
+    def cube(x: np.ndarray) -> float:
+        return np.sum(x * x * x) / 3.0
+
+    x = np.array([-1.0, 0.0, 1.0, 2.0, 10.0])
+    DlinearDx = np.array([1.0, 1.0, 1.0, 1.0, 1.0])
+    DsquareDx = np.array([-1.0, 0.0, 1.0, 2.0, 10.0])
+    DcubeDx = np.array([1.0, 0.0, 1.0, 4.0, 100.0])
+
+    tolerance = 1e-8
+    for sut, expected in zip(
+            Optimizer.numerical_gradient(x, linear), DlinearDx):
+        assert np.abs(sut - expected) < tolerance
+    for sut, expected in zip(
+            Optimizer.numerical_gradient(x, square), DsquareDx):
+        assert np.abs(sut - expected) < tolerance
+    for sut, expected in zip(
+            Optimizer.numerical_gradient(x, cube), DcubeDx):
+        assert np.abs(sut - expected) < tolerance
 
 
 def test_gradientdescent():
     n_observations = 100
     theta_seeked = np.array([10.0, 1.0])
     features = np.random.rand(n_observations)
-    labels = linear(features, theta_seeked)
+    labels = linear_regression(features, theta_seeked)
     options = {
         'learningRate': 1.0,
         'maxiter': 500,
@@ -21,7 +48,7 @@ def test_gradientdescent():
     }
 
     def objective(theta):
-        predicted = linear(features, theta)
+        predicted = linear_regression(features, theta)
         loss = Loss.squared_error(predicted, labels)
         return loss
 
@@ -40,11 +67,11 @@ def test_LBFGSB():
     n_observations = 100
     theta_seeked = np.array([10.0, 1.0])
     features = np.random.rand(n_observations)
-    labels = linear(features, theta_seeked)
+    labels = linear_regression(features, theta_seeked)
     options = {}
 
     def objective(theta):
-        predicted = linear(features, theta)
+        predicted = linear_regression(features, theta)
         loss = Loss.squared_error(predicted, labels)
         return loss
 

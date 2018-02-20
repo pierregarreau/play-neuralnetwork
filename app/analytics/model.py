@@ -1,14 +1,8 @@
 import numpy as np
+import math as math
 
 from abc import ABCMeta, abstractclassmethod
-from typing import Dict, List, Callable
-from functools import reduce
-
-from random import uniform
-from math import sqrt, fabs, floor
-
-from random import sample
-from decimal import Decimal
+from typing import Dict, List, Callable, Tuple
 
 from analytics.optimizer import Optimizer
 from analytics.util import Activation, NeuralNetworkUtil
@@ -45,51 +39,44 @@ class NeuralNet(Model):
             self.n_layers = len(layers)
             self.n_parameters = sum([next_layer * (layer + 1) for layer, next_layer in zip(layers[:-1], layers[1:])])
             self.theta = np.empty(self.n_parameters)
-            self.thetas = self._decompose(self.theta)
+            self.thetas = []
+            self._decompose(self.theta, self.thetas)
 
     def predict(self, features: np.ndarray) -> np.ndarray:
         targetPrediction = self._feed_forward(features)
         return targetPrediction[-1][1]
 
     def fit(self, features: np.ndarray, labels: np.ndarray, optim: Optimizer, loss: Callable[[np.ndarray], float]) -> Dict:
-        # TODO STOPPED HERE ---
-        # this function trains the neural network with backward propagation
-        # minimizationOptions = {'optimizer': '', 'maxiter': 1000, 'tol': 1e-7}
         self._random_init()
-        # Careful roll / unroll
 
         def objective(theta):
             return self.objective(theta, features, labels, loss)
 
         res = optim.minimize(objective=objective, init=self.theta)
-        # print('Neural Network calibrate: ', res)
-        # self.__exportTrainedParametersToFiles(trainedParametersDirectory)
         return res
 
-    def _decompose(self, theta: np.ndarray) -> List[np.ndarray]:
-        thetas = []
+    def _decompose(self, theta: np.ndarray, thetas: List) -> List[np.ndarray]:
         idx = 0
         for layer, next_layer in zip(self.layers[:-1], self.layers[1:]):
             n_params = next_layer * (layer + 1)
             thetas.append(theta[idx:idx+n_params].reshape((next_layer, layer + 1)))
             idx += n_params
-        return thetas
 
     def _random_init(self) -> None:
         for index, theta in zip(range(self.n_layers), self.thetas):
             current_layer_size = theta.shape[0]
             next_layer_size = theta.shape[1]
-            epsilon = sqrt(6.0) / sqrt(current_layer_size + next_layer_size)
+            epsilon = math.sqrt(6.0) / math.sqrt(current_layer_size + next_layer_size)
             self.thetas[index] = epsilon * (np.random.uniform(0, 2.0, (current_layer_size, next_layer_size)) - 1.0)
 
-    def _feed_forward(self, features: np.ndarray) -> np.ndarray:
+    def _feed_forward(self, features: np.ndarray) -> List[Tuple[np.ndarray, np.ndarray]]:
         a = NeuralNetworkUtil.add_bias(features)
         predicted = list()
         predicted.append(([], a))
         for layerIndex, theta in zip(range(self.n_layers), self.thetas):
             z = np.dot(a, theta.transpose())
             # TODO refactor this sigmoid into function
-            sigmoid = 1.0 / (1.0 + np.exp(-z))
+            sigmoid = Activation.sigmoid(-z)
             if layerIndex < self.n_layers - 2:
                 a = NeuralNetworkUtil.add_bias(sigmoid)
             else:
@@ -102,7 +89,8 @@ class NeuralNet(Model):
         dJ = []
         m = features.__len__()
         self.theta = theta
-        self.thetas = self._decompose(theta)
+        self.thetas = []
+        self._decompose(theta, self.thetas)
 
         # predict + compute loss + regularization = objective
         predicted = self._feed_forward(features)
@@ -116,18 +104,17 @@ class NeuralNet(Model):
 
         return [J, dJ]
 
-    def _back_propagate(self, predicted: np.ndarray, labels: np.ndarray, m: int, omega: float = 0.1) -> [np.ndarray, List[np.ndarray]]:
+    def _back_propagate(self, predicted: List[Tuple[np.ndarray]], labels: np.ndarray) -> [np.ndarray, List[np.ndarray]]:
         # Initialization
-        numObservations = labels.shape[0]
+        m = labels.shape[0]
         grad = np.empty(self.n_parameters)
-        grads = self._decompose(grad)
+        grads = []
+        self._decompose(grad, grads)
 
         # First iteration
         delta = predicted[-1][1] - labels
-        a2withBias = predicted[-2][1]
-        grads[-1] = np.dot(delta.transpose(), a2withBias) / numObservations
-        grads[-1] += omega / m * self.thetas[-1]
-        # grads.append(grad)
+        biased_a2 = predicted[-2][1]
+        grads[-1][:, :] = np.dot(delta.transpose(), biased_a2) / m
 
         # Other layers
         for index, theta in reversed(list(enumerate(self.thetas))):
@@ -135,9 +122,7 @@ class NeuralNet(Model):
                 propError = np.dot(delta, theta)
                 gZ = Activation.dsigmoid(predicted[index][0])
                 delta = np.multiply(gZ, propError[:, 1:])
-                grads[index-1] = np.dot(delta.transpose(), predicted[index-1][1]) / numObservations
-                grads[index-1] += omega / m * self.thetas[index-1]
-                # grads.insert(0, grad)
+                grads[index-1][:, :] = np.dot(delta.transpose(), predicted[index-1][1]) / m
 
         return grad, grads
 
