@@ -2,7 +2,7 @@ import numpy as np
 import scipy.optimize as scioptim
 
 from abc import ABCMeta, abstractmethod
-from typing import Dict, Callable
+from typing import Dict, Callable, Tuple
 
 
 class Result:
@@ -27,7 +27,7 @@ class Result:
             'status': self.status,
             'success': self.success
         }
-        
+
 
 class Optimizer(metaclass=ABCMeta):
     def __init__(self, options: Dict):
@@ -57,11 +57,11 @@ class GradientDescent(Optimizer):
     def __init__(self, options: Dict):
         super(GradientDescent, self).__init__(options)
 
-    def minimize(self, objective: Callable[[np.ndarray], float], init: np.ndarray) -> Dict:
+    def minimize(self, objective: Callable[[np.ndarray], Tuple[float, np.ndarray]], init: np.ndarray) -> Dict:
         '''
         This function performs a simple gradient descent
         '''
-        learningRate = self.options.get('learningRate', 1.0)
+        learningRate = self.options.get('learning_rate', 1.0)
         maxiter = self.options.get('maxiter', 500)
         tol = self.options.get('tol', 1e-9)
         jac = self.options.get('jac', False)
@@ -93,7 +93,7 @@ class LBFGSB(Optimizer):
     def __init__(self, options: Dict = {}):
         super(LBFGSB, self).__init__(options)
 
-    def minimize(self, objective: Callable[[np.ndarray], float], init: np.ndarray) -> Dict:
+    def minimize(self, objective: Callable[[np.ndarray], Tuple[float, np.ndarray]], init: np.ndarray) -> Dict:
         res = scioptim.minimize(
             fun=objective,
             x0=init,

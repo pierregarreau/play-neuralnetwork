@@ -67,7 +67,7 @@ class NeuralNet(Model):
             current_layer_size = theta.shape[0]
             next_layer_size = theta.shape[1]
             epsilon = math.sqrt(6.0) / math.sqrt(current_layer_size + next_layer_size)
-            self.thetas[index] = epsilon * (np.random.uniform(0, 2.0, (current_layer_size, next_layer_size)) - 1.0)
+            self.thetas[index][:] = epsilon * (np.random.uniform(0, 2.0, (current_layer_size, next_layer_size)) - 1.0)
 
     def _feed_forward(self, features: np.ndarray) -> List[Tuple[np.ndarray, np.ndarray]]:
         a = NeuralNetworkUtil.add_bias(features)
@@ -76,7 +76,7 @@ class NeuralNet(Model):
         for layerIndex, theta in zip(range(self.n_layers), self.thetas):
             z = np.dot(a, theta.transpose())
             # TODO refactor this sigmoid into function
-            sigmoid = Activation.sigmoid(-z)
+            sigmoid = Activation.sigmoid(z)
             if layerIndex < self.n_layers - 2:
                 a = NeuralNetworkUtil.add_bias(sigmoid)
             else:
@@ -88,7 +88,7 @@ class NeuralNet(Model):
         J = []
         dJ = []
         m = features.__len__()
-        self.theta = theta
+        self.theta[:] = theta[:]
         self.thetas = []
         self._decompose(theta, self.thetas)
 
@@ -98,9 +98,8 @@ class NeuralNet(Model):
         self.regularize(J, m, omega)
 
         # backprop + regularization = Dobjective
-        dJ, dJs = self._back_propagate(predicted, labels, m, omega)
+        dJ, dJs = self._back_propagate(predicted, labels)
         self.regularize_gradient(dJs, m, omega)
-        # flatGrad = roll(dJ)
 
         return [J, dJ]
 
@@ -120,8 +119,8 @@ class NeuralNet(Model):
         for index, theta in reversed(list(enumerate(self.thetas))):
             if index > 0:
                 propError = np.dot(delta, theta)
-                gZ = Activation.dsigmoid(predicted[index][0])
-                delta = np.multiply(gZ, propError[:, 1:])
+                dg_z = Activation.dsigmoid(predicted[index][0])
+                delta = np.multiply(dg_z, propError[:, 1:])
                 grads[index-1][:, :] = np.dot(delta.transpose(), predicted[index-1][1]) / m
 
         return grad, grads
@@ -141,33 +140,9 @@ class NeuralNet(Model):
             assert dJ.shape == theta.shape
             dJ[:, 1:] += omega * theta[:, 1:] / m
 
-    def __minimize(self, costFunction, thetaInit, minimizationOptions, features, labels):
-        # factory routine decides which optimizer to use
-        # costFunction needs to return the objective value and the gradient in a list
-        #
-        # This function has been retired
-        #
-        optimizer = minimizationOptions['optimizer']
-        tol = minimizationOptions['tol']
-        optimizationOptions = {'maxiter': minimizationOptions['maxiter']}
-        if optimizer == 'CG':
-            costFunctionCG = lambda theta : costFunction(theta, features, labels)
-            optimizationOptions['learningRate'] = 1.0
-            optimizationOptions['tol'] = tol
-            res = self.__GD(costFunctionCG, thetaInit, optimizationOptions)
-        elif optimizer == 'BSGD':
-            optimizationOptions['learningRate'] = 1.0
-            optimizationOptions['tol'] = tol
-            res = self.__BSGD(costFunction, thetaInit, optimizationOptions, features, labels)
-        else:
-            optimizationOptions['gtol'] = tol
-            costFunctionCG = lambda theta : costFunction(theta, features, labels)
-            res = minimize(fun = costFunctionCG, x0 = thetaInit, method = 'L-BFGS-B', options = optimizationOptions, jac = True)
-        return res
 
-    # Save / load
-    #
-    #
+    # Below Deprecated
+    # ////////////////
     def __loadTrainedParametersFromFiles(self, trainedParametersDirectory):
         # TODO check if the dimensions of the loaded parameters are the ones announced
         # in the construction of the neural network
@@ -187,21 +162,3 @@ class NeuralNet(Model):
             trainedThetaFileName = trainedParametersDirectory + '/Theta' + str(
                 counter) + '.txt'
             Load.to_file(theta, trainedThetaFileName)
-    #
-    #
-
-    # Below only used for computing numerial gradient (testing)
-    def _feed_forwardNoHistory(self, features):
-        a = features
-        for theta in self.thetas:
-            layerInputWithBias = NeuralNetworkUtil.add_bias(a)
-            z = np.dot(layerInputWithBias,theta.transpose())
-            a = NeuralNetworkUtil.applyScalarFunction(z, NeuralNetworkUtil.sigmoid)
-        return (z,a)
-
-    def objectiveOnly(self, theta, features, labels):
-        J = []
-        unroll(theta, self.thetas)
-        predicted = self._feed_forwardNoHistory(features)
-        J = NeuralNetworkUtil.logErrorClassificationFunction(predicted[1], labels)
-        return J

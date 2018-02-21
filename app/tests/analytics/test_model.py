@@ -3,7 +3,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 
 from analytics.model import NeuralNet
-from analytics.optimizer import GradientDescent, Optimizer
+from analytics.optimizer import GradientDescent, LBFGSB, Optimizer
 from analytics.util import Loss
 from data.load import Load
 
@@ -22,10 +22,12 @@ def test_predict():
     nn = NeuralNet(arxitecture)
     # In Lieu of training
     nn.theta = np.array([-30, 20, 20, 10, -20, -20, -10, 20, 20])
-    nn.thetas = nn._decompose(nn.theta)
+    nn.thetas = []
+    nn._decompose(nn.theta, nn.thetas)
     # Predict
     predictions = nn.predict(features)
-    print(np.array(zip(predictions, labels)))
+    for prediction, label in zip(predictions, labels):
+        print(prediction, label)
     assert Loss.accuracy(predictions, labels) > 0.99
 
 
@@ -59,21 +61,22 @@ def test_back_propagate():
 
 
 def test_fit():
-    # DATA_DIRECTORY
-    features, labels = Load.labelled_xnor()
+    # Data
+    features, labels = Load.labelled_xnor(100)
+    print(features[:2])
+    print(labels[:2])
     X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=0.33)
-
-    print(X_train[:2], y_train[:2])
-
     # Fit
-    layers = [2, 1]
+    layers = [2, 2, 1]
     neural_net = NeuralNet(layers)
-    optimizer = GradientDescent(options={'optimizer': '', 'maxiter': 1000, 'tol': 1e-7, 'jac': True})
+    optimizer = GradientDescent(options={'optimizer': '', 'maxiter': 1000, 'tol': 1e-7, 'jac': True, 'learning_rate': 1.0})
     loss = Loss.crossentropy
     res = neural_net.fit(X_train, y_train, optimizer, loss)
     print(res.__dict__())
     # Predict
     predicted = neural_net.predict(X_test)
+    for p, y in zip(predicted, y_test):
+        print(p,y)
     error = loss(predicted, y_test)
     print(error)
     assert error < 1e-1
