@@ -63,16 +63,20 @@ def test_back_propagate():
 def test_fit():
     # Data
     features, labels = Load.labelled_xnor(100)
-    print(features[:2])
-    print(labels[:2])
     X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=0.33)
     # Fit
     layers = [2, 2, 1]
     neural_net = NeuralNet(layers)
-    optimizer = GradientDescent(options={'optimizer': '', 'maxiter': 1000, 'tol': 1e-7, 'jac': True, 'learning_rate': 1.0})
+    optimizer = GradientDescent(options={
+        'optimizer': '',
+        'maxiter': 1000,
+        'tol': 1e-7,
+        'jac': True,
+        'learning_rate': 1.0
+    })
     loss = Loss.crossentropy
     res = neural_net.fit(X_train, y_train, optimizer, loss)
-    print(res.__dict__())
+    print(res)
     # Predict
     predicted = neural_net.predict(X_test)
     for p, y in zip(predicted, y_test):

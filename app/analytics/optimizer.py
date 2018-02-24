@@ -16,8 +16,11 @@ class Result:
         self.status = 0
         self.success = False
 
-    def __dict__(self):
-        return {
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return str({
             'fun': self.fun,
             'x': self.x,
             'jac': self.jac,
@@ -26,7 +29,7 @@ class Result:
             'nit': self.nit,
             'status': self.status,
             'success': self.success
-        }
+        })
 
 
 class Optimizer(metaclass=ABCMeta):
@@ -40,6 +43,7 @@ class Optimizer(metaclass=ABCMeta):
 
     @staticmethod
     def numerical_gradient(theta: np.ndarray, function: Callable[[np.ndarray], float]) -> np.ndarray:
+        '''Finite Differences of order 2, centered scheme'''
         epsilon = 1e-4
         n_parameters = theta.shape[0]
         delta = np.zeros(n_parameters)
@@ -47,6 +51,8 @@ class Optimizer(metaclass=ABCMeta):
         Jdown = np.zeros(n_parameters)
         for index in range(n_parameters):
             delta[index] = epsilon
+            print(theta, type(theta))
+            print(delta, type(delta))
             Jup[index] = function(theta + delta)
             Jdown[index] = function(theta - delta)
             delta[index] = 0.0

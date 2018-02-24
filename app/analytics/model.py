@@ -49,8 +49,14 @@ class NeuralNet(Model):
     def fit(self, features: np.ndarray, labels: np.ndarray, optim: Optimizer, loss: Callable[[np.ndarray], float]) -> Dict:
         self._random_init()
 
-        def objective(theta):
-            return self.objective(theta, features, labels, loss)
+        if not optim.options.get('jac', False):
+            # use numerical_gradient to compute grads, much slower!
+            def objective(theta: np.ndarray) -> float:
+                return self.objective(theta, features, labels, loss)[0]
+        else:
+            # use backprop to compute grads
+            def objective(theta: np.ndarray) -> Tuple[float, np.ndarray]:
+                return self.objective(theta, features, labels, loss)
 
         res = optim.minimize(objective=objective, init=self.theta)
         return res
@@ -84,7 +90,7 @@ class NeuralNet(Model):
             predicted.append((z, a))
         return predicted
 
-    def objective(self, theta, features, labels, loss: Callable[[np.ndarray], float], omega: float = 0.1) -> List[np.ndarray]:
+    def objective(self, theta, features, labels, loss: Callable[[np.ndarray], float], omega: float = 0.1) -> Tuple[float, np.ndarray]:
         J = []
         dJ = []
         m = features.__len__()
