@@ -51,8 +51,8 @@ class NeuralNet(Model):
 
         if not optim.options.get('jac', False):
             # use numerical_gradient to compute grads, much slower!
-            def objective(theta: np.ndarray) -> float:
-                return self.objective(theta, features, labels, loss)[0]
+            def objective(theta: np.ndarray) -> Tuple[float, np.ndarray]:
+                return self.objective(theta, features, labels, loss)[0], None
         else:
             # use backprop to compute grads
             def objective(theta: np.ndarray) -> Tuple[float, np.ndarray]:

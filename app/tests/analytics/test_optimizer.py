@@ -1,5 +1,6 @@
 import numpy as np
 
+from typing import Tuple
 from analytics.util import Loss
 from analytics.optimizer import LBFGSB, GradientDescent, Optimizer
 
@@ -47,10 +48,10 @@ def test_gradientdescent():
         'jac': False
     }
 
-    def objective(theta):
+    def objective(theta: np.ndarray) -> Tuple[float, np.ndarray]:
         predicted = linear_regression(features, theta)
         loss = Loss.squared_error(predicted, labels)
-        return loss
+        return loss, None
 
     theta0 = np.random.rand(2)
     optimizer = GradientDescent(options)
@@ -70,10 +71,10 @@ def test_LBFGSB():
     labels = linear_regression(features, theta_seeked)
     options = {}
 
-    def objective(theta):
+    def objective(theta: np.ndarray) -> Tuple[float, np.ndarray]:
         predicted = linear_regression(features, theta)
         loss = Loss.squared_error(predicted, labels)
-        return loss
+        return loss, None
 
     theta0 = np.random.rand(2)
     optimizer = LBFGSB(options)

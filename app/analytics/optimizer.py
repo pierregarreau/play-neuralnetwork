@@ -74,13 +74,14 @@ class GradientDescent(Optimizer):
         theta = init
 
         l2GradDelta = 0.0
+        if not jac:
+            def obj(theta: np.array) -> float:
+                return objective(theta)[0]
 
         for iterCounter in range(maxiter):
-            if jac:
-                [cost, grad] = objective(theta)
-            else:
-                cost = objective(theta)
-                grad = Optimizer.numerical_gradient(theta, objective)
+            [cost, grad] = objective(theta)
+            if not jac:
+                grad = Optimizer.numerical_gradient(theta, obj)
             theta -= learningRate * grad
             l2GradDelta = np.sum(grad * grad)
             if l2GradDelta < tol:
@@ -100,12 +101,34 @@ class LBFGSB(Optimizer):
         super(LBFGSB, self).__init__(options)
 
     def minimize(self, objective: Callable[[np.ndarray], Tuple[float, np.ndarray]], init: np.ndarray) -> Dict:
-        res = scioptim.minimize(
-            fun=objective,
-            x0=init,
-            method='L-BFGS-B',
-            options=self.options
-        )
+        def obj(theta: np.ndarray) -> float:
+            return objective(theta)[0]
+
+        def obj_grad(theta: np.ndarray) -> np.ndarray:
+            return objective(theta)[1]
+
+        jac = self.options.get('jac')
+        try:
+            del self.options['jac']
+        except:
+            print('options do not contain key `jac`')
+        if jac:
+            # jacobian provided
+            res = scioptim.minimize(
+                fun=obj,
+                jac=obj_grad,
+                x0=init,
+                method='L-BFGS-B',
+                options=self.options
+            )
+        else:
+            # jacobian not provided, computed numerically
+            res = scioptim.minimize(
+                fun=obj,
+                x0=init,
+                method='L-BFGS-B',
+                options=self.options
+            )
         return res
 
 # Deprecated
