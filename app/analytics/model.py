@@ -6,11 +6,8 @@ from typing import Dict, List, Callable, Tuple
 
 from analytics.optimizer import Optimizer
 from analytics.util import Activation, NeuralNetworkUtil
-from data.load import Load
 
 DEFAULT_DIRECTORY = './data/trainedData'
-
-# TODO NeuralNetwork is a factory?
 
 
 class Model(metaclass=ABCMeta):
@@ -61,6 +58,25 @@ class NeuralNet(Model):
         res = optim.minimize(objective=objective, init=self.theta)
         return res
 
+    def objective(self, theta, features, labels, loss: Callable[[np.ndarray], float], omega: float = 0.1) -> Tuple[float, np.ndarray]:
+        J = []
+        dJ = []
+        m = features.__len__()
+        self.theta[:] = theta[:]
+        self.thetas = []
+        self._decompose(theta, self.thetas)
+
+        # predict + compute loss + regularization = objective
+        predicted = self._feed_forward(features)
+        J = loss(predicted[-1][1], labels)
+        self._regularize(J, m, omega)
+
+        # backprop + regularization = Dobjective
+        dJ, dJs = self._back_propagate(predicted, labels)
+        self._regularize_gradient(dJs, m, omega)
+
+        return [J, dJ]
+
     def _decompose(self, theta: np.ndarray, thetas: List) -> List[np.ndarray]:
         idx = 0
         for layer, next_layer in zip(self.layers[:-1], self.layers[1:]):
@@ -90,25 +106,6 @@ class NeuralNet(Model):
             predicted.append((z, a))
         return predicted
 
-    def objective(self, theta, features, labels, loss: Callable[[np.ndarray], float], omega: float = 0.1) -> Tuple[float, np.ndarray]:
-        J = []
-        dJ = []
-        m = features.__len__()
-        self.theta[:] = theta[:]
-        self.thetas = []
-        self._decompose(theta, self.thetas)
-
-        # predict + compute loss + regularization = objective
-        predicted = self._feed_forward(features)
-        J = loss(predicted[-1][1], labels)
-        self.regularize(J, m, omega)
-
-        # backprop + regularization = Dobjective
-        dJ, dJs = self._back_propagate(predicted, labels)
-        self.regularize_gradient(dJs, m, omega)
-
-        return [J, dJ]
-
     def _back_propagate(self, predicted: List[Tuple[np.ndarray]], labels: np.ndarray) -> [np.ndarray, List[np.ndarray]]:
         # Initialization
         m = labels.shape[0]
@@ -131,13 +128,13 @@ class NeuralNet(Model):
 
         return grad, grads
 
-    def regularize(self, J: float, m: int, omega) -> float:
+    def _regularize(self, J: float, m: int, omega) -> float:
         Jreg = 0.0
         for theta in self.thetas:
             Jreg += np.sum(theta[:, 1:] * theta[:, 1:])
         J += 0.5 * omega * Jreg / m
 
-    def regularize_gradient(self, dJs: np.ndarray, m, omega):
+    def _regularize_gradient(self, dJs: np.ndarray, m, omega):
         # for index, theta in zip(range(self.n_layers), self.thetas):
         assert len(dJs) == len(self.thetas)
         for dJ, theta in zip(dJs, self.thetas):
@@ -145,26 +142,3 @@ class NeuralNet(Model):
             # assert dJs[idx].shape == self.thetas[idx].shape
             assert dJ.shape == theta.shape
             dJ[:, 1:] += omega * theta[:, 1:] / m
-
-
-    # Below Deprecated
-    # ////////////////
-    def __loadTrainedParametersFromFiles(self, trainedParametersDirectory):
-        # TODO check if the dimensions of the loaded parameters are the ones announced
-        # in the construction of the neural network
-        for counter in range(self.n_layers - 1):
-            trainedThetaFileName = trainedParametersDirectory + '/Theta' + str(
-                counter) + '.txt'
-            theta = Load.from_file(trainedThetaFileName)
-            if theta.shape.__len__() > 1:
-                self.thetas[counter] = theta
-            else:
-                self.thetas[counter] = theta.reshape(1, theta.size)
-
-    def __exportTrainedParametersToFiles(self, trainedParametersDirectory):
-        # TODO check if the dimensions of the loaded parameters are the ones announced
-        # in the construction of the neural network
-        for counter, theta in zip(range(self.n_layers - 1), self.thetas):
-            trainedThetaFileName = trainedParametersDirectory + '/Theta' + str(
-                counter) + '.txt'
-            Load.to_file(theta, trainedThetaFileName)

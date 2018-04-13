@@ -3,7 +3,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 
 from analytics.model import NeuralNet
-from analytics.optimizer import GradientDescent, LBFGSB, Optimizer
+from analytics.optimizer import GradientDescent, Optimizer
 from analytics.util import Loss
 from data.load import Load
 
