@@ -1,39 +1,34 @@
 #! /usr/bin/env python
-__author__ = 'PierreGarreau'
-
-import matplotlib.pyplot as plt
 
 import numpy as np
-from sklearn.cross_validation import train_test_split
 
-from analytics.NeuralNetwork import *
-from analytics.NeuralNetworkUtil import *
-from util.datadisplay import plot, plotCostFunction, plotCostFunctionVsRegParam, plotCostFunctionAfterTrainingVsRegParam
+from sklearn.model_selection import train_test_split
+from analytics.model import NeuralNet
+from analytics.optimizer import GradientDescent, Optimizer
+from analytics.util import Loss
 from data.load import Load
 
-DATA_DIRECTORY = './data'
-
 if __name__ == "__main__":
-    # try:
-    features, labels = Load.mnist(10)
-    neuralNetworkArchitecture = np.array([400, 25, 10])
-    X_train, X_test, y_train, y_test = train_test_split(
-        features, labels, train_size=0.85)
-    print(features.shape, labels.shape, neuralNetworkArchitecture)
-    nn = NeuralNetwork(neuralNetworkArchitecture)
-    res = nn.train(X_train, y_train)
+    # Data
+    features, labels = Load.labelled_xnor(100)
+    X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=0.33)
+    # Fit
+    layers = [2, 2, 1]
+    neural_net = NeuralNet(layers)
+    optimizer = GradientDescent(options={
+        'optimizer': '',
+        'maxiter': 1000,
+        'tol': 1e-7,
+        'jac': True,
+        'learning_rate': 1.0
+    })
+    loss = Loss.crossentropy
+    res = neural_net.fit(X_train, y_train, optimizer, loss)
+    print(res)
+    # Predict
+    predicted = neural_net.predict(X_test)
+    for p, y in zip(predicted, y_test):
+        print(p,y)
+    loss = loss(predicted, y_test)
+    print('Loss: ', loss)
 
-    predictions = nn.predict(X_train)
-    predictionAccuracy = NeuralNetworkUtil.computePredictionAccuracy(
-        predictions, y_train)
-    print('The NN predicted the output with {}% accuracy'.format(
-        predictionAccuracy * 100))
-
-    # Plotting routines Below
-    # regParam = 0.1
-    # plotCostFunction(regParam)
-    # plotCostFunctionAfterTrainingVsRegParam()
-    # plot(features,100)
-
-# except ValueError:
-# print(ValueError)
