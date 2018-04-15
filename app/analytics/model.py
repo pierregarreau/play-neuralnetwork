@@ -5,7 +5,8 @@ from abc import ABCMeta, abstractclassmethod
 from typing import Dict, List, Callable, Tuple
 
 from analytics.optimizer import Optimizer
-from analytics.util import Activation, NeuralNetworkUtil
+from analytics.util import NeuralNetworkUtil
+from analytics.activation import ActivationFactory
 
 DEFAULT_DIRECTORY = './data/trainedData'
 
@@ -28,13 +29,16 @@ class Model(metaclass=ABCMeta):
 
 
 class NeuralNet(Model):
-    def __init__(self, layers: List):
+    def __init__(self, layers: List[Tuple]):
         if len(layers) == 0:
             print('Error: need at least one layer to build this network')
         else:
-            self.layers = layers
+            self.layers = [layer[0] for layer in layers]
+            self.activations = [
+                ActivationFactory.create(layer[1]) for layer in layers
+            ]
             self.n_layers = len(layers)
-            self.n_parameters = sum([next_layer * (layer + 1) for layer, next_layer in zip(layers[:-1], layers[1:])])
+            self.n_parameters = sum([next_layer * (layer + 1) for layer, next_layer in zip(self.layers[:-1], self.layers[1:])])
             self.theta = np.empty(self.n_parameters)
             self.thetas = []
             self._decompose(self.theta, self.thetas)
@@ -98,11 +102,11 @@ class NeuralNet(Model):
         for layerIndex, theta in zip(range(self.n_layers), self.thetas):
             z = np.dot(a, theta.transpose())
             # TODO refactor this sigmoid into function
-            sigmoid = Activation.sigmoid(z)
+            neuron = self.activations[layerIndex].function(z)
             if layerIndex < self.n_layers - 2:
-                a = NeuralNetworkUtil.add_bias(sigmoid)
+                a = NeuralNetworkUtil.add_bias(neuron)
             else:
-                a = sigmoid
+                a = neuron
             predicted.append((z, a))
         return predicted
 
@@ -122,7 +126,7 @@ class NeuralNet(Model):
         for index, theta in reversed(list(enumerate(self.thetas))):
             if index > 0:
                 propError = np.dot(delta, theta)
-                dg_z = Activation.dsigmoid(predicted[index][0])
+                dg_z = self.activations[index].derivative(predicted[index][0])
                 delta = np.multiply(dg_z, propError[:, 1:])
                 grads[index-1][:, :] = np.dot(delta.transpose(), predicted[index-1][1]) / m
 
@@ -138,7 +142,7 @@ class NeuralNet(Model):
         # for index, theta in zip(range(self.n_layers), self.thetas):
         assert len(dJs) == len(self.thetas)
         for dJ, theta in zip(dJs, self.thetas):
-        # for idx in range(self.n_layers-1):
+            # for idx in range(self.n_layers-1):
             # assert dJs[idx].shape == self.thetas[idx].shape
             assert dJ.shape == theta.shape
             dJ[:, 1:] += omega * theta[:, 1:] / m

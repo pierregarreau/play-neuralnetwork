@@ -10,7 +10,7 @@ from data.load import Load
 
 def test_init():
     # nn arxi should be a list of dimentions or tuples
-    arxitecture = [2, 2]
+    arxitecture = [(2, 'sigmoid'), (2, 'sigmoid')]
     nn = NeuralNet(arxitecture)
     assert True
 
@@ -18,7 +18,7 @@ def test_init():
 def test_predict():
     # Set up of NN
     features, labels = Load.labelled_xnor()
-    arxitecture = [2, 2, 1]
+    arxitecture = [(2, 'sigmoid'), (2, 'sigmoid'), (1, 'sigmoid')]
     nn = NeuralNet(arxitecture)
     # In Lieu of training
     nn.theta = np.array([-30, 20, 20, 10, -20, -20, -10, 20, 20])
@@ -33,7 +33,7 @@ def test_predict():
 
 def test_back_propagate():
     # Set-up
-    layers = [2, 2, 1]
+    layers = [(2, 'sigmoid'), (2, 'sigmoid'), (1, 'sigmoid')]
     neural_net = NeuralNet(layers)
     neural_net.theta = np.array([-30, 20, 20, 10, -20, -20, -10, 20, 20])
     neural_net.thetas = []
@@ -65,7 +65,7 @@ def test_fit():
     features, labels = Load.labelled_xnor(100)
     X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=0.33)
     # Fit
-    layers = [2, 2, 1]
+    layers = [(2, 'sigmoid'), (2, 'sigmoid'), (1, 'sigmoid')]
     neural_net = NeuralNet(layers)
     optimizer = GradientDescent(options={
         'optimizer': '',
@@ -87,7 +87,7 @@ def test_fit():
 
 
 def test_decompose():
-    arxitecture = [2, 2, 1]
+    arxitecture = [(2, 'sigmoid'), (2, 'sigmoid'), (1, 'sigmoid')]
     nn = NeuralNet(arxitecture)
     theta = np.array([-30, 20, 20, 10, -20, -20, -10, 20, 20])
     thetas = []
