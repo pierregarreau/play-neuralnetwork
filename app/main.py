@@ -13,7 +13,7 @@ if __name__ == "__main__":
     features, labels = Load.labelled_xnor(100)
     X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=0.33)
     # Fit
-    layers = [2, 2, 1]
+    layers = [(2, 'sigmoid'), (2, 'sigmoid'), (1, 'sigmoid')]
     neural_net = NeuralNet(layers)
     optimizer = GradientDescent(options={
         'optimizer': '',
@@ -31,4 +31,3 @@ if __name__ == "__main__":
         print(p,y)
     loss = loss(predicted, y_test)
     print('Loss: ', loss)
-

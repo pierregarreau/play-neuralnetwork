@@ -13,11 +13,11 @@ pipenv run python main.py
 Not surprisingly, this toy library sets up a neural network model in a similar fashion as [keras](https://keras.io/). You first define an architecture for your network
 
 ```Python
-layers = [2, 2, 1]
+layers = [(2, 'sigmoid'), (2, 'sigmoid'), (1, 'sigmoid')]
 neural_net = NeuralNet(layers)
 ```
 
-All activation functions are assumed to be sigmoids. Then you specify your optimizer:
+Currently, only `sigmoid's` are available for activation functions. You can however add your own in the `activation.py` factory. Then you specify your optimizer:
 
 ```Python    
 optimizer = GradientDescent(options={
